@@ -1,0 +1,22 @@
+CLASSNAME:
+- not_subviews
+- section_subviews
+- three_view_subviews
+DATA:
+  BATCHSIZES: 16
+  DATA_DIR: ./train_classification_new
+  IMG_SIZE:
+  - 224
+  - 224
+  NUM_WORKERS: 4
+MODEL:
+  CHECKPOINT: ./weights/best_cls.pt
+  EPOCHS: 40
+  LEARNING_RATE: 5.0e-05
+  LOSS_FUNCTION: CrossEntropyLoss
+  MODEL_NAME: resnet18
+  NUMCLASS: 3
+  OPTIM_FUNCTION: Adam
+WEIGHT:
+  SAVE_BEST: true
+  SAVE_WEIGHT_PATH: ./weights

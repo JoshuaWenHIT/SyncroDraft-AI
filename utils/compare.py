@@ -1,224 +1,335 @@
 import json
-import numpy as np
-from Levenshtein import ratio as levenshtein_ratio
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from typing import Dict, List, Tuple, Optional
-
-# 核心配置（可根据业务调整）
-CORE_KEYS = ["uid", "category", "content", "embedding"]
-FIELD_WEIGHTS = {  # 各字段在综合评分中的权重
-    "category": 0.4,
-    "content": 0.3,
-    "embedding": 0.3
-}
-SIMILARITY_THRESHOLD = 0.8  # 综合相似度阈值，低于则判定为不匹配
-TEXT_EMPTY_DEFAULT = 0.0  # content为空时的默认相似度
-EMBEDDING_EMPTY_DEFAULT = 0.0  # embedding为空时的默认相似度
+from typing import Dict, List, Any, Optional, Tuple
 
 
-def load_json(file_path: str) -> List[Dict]:
-    """加载JSON文件，校验核心字段"""
+def load_json(file_path: str) -> List[Dict[str, Any]]:
+    """加载JSON文件并返回解析后的列表"""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception as e:
-        raise ValueError(f"加载JSON文件失败：{file_path}，错误：{str(e)}")
-
-    # 校验每个标注的核心字段
-    for idx, item in enumerate(data):
-        missing_keys = [k for k in CORE_KEYS if k not in item]
-        if missing_keys:
-            raise ValueError(f"第{idx}个标注缺失核心字段：{missing_keys}")
-
-    return data
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"文件 {file_path} 未找到")
+    except json.JSONDecodeError:
+        raise ValueError(f"文件 {file_path} 不是有效的JSON格式")
 
 
-def text_similarity(text1: str, text2: str) -> float:
-    """
-    计算文本相似度（融合编辑距离+TF-IDF余弦相似度）
-    :param text1: 图纸A的content
-    :param text2: 图纸B的content
-    :return: 0-1之间的相似度值
-    """
-    # 处理空文本
-    if not text1 or not text2:
-        return TEXT_EMPTY_DEFAULT
-
-    # 编辑距离相似度（字符级）
-    lev_sim = levenshtein_ratio(text1.strip(), text2.strip())
-
-    # TF-IDF余弦相似度（词级，需至少2个字符）
-    if len(text1) < 2 or len(text2) < 2:
-        tfidf_sim = lev_sim
-    else:
-        vectorizer = TfidfVectorizer(ngram_range=(1, 2))
-        try:
-            tfidf_matrix = vectorizer.fit_transform([text1, text2])
-            tfidf_sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-        except:
-            tfidf_sim = lev_sim
-
-    # 融合两种相似度（平衡字符级和词级特征）
-    return (lev_sim + tfidf_sim) / 2
+def group_by_view(annotations: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    """将标注信息按view字段分组"""
+    view_groups = {}
+    for anno in annotations:
+        view = anno.get('view', 'unknown')
+        if view not in view_groups:
+            view_groups[view] = []
+        view_groups[view].append(anno)
+    return view_groups
 
 
-def embedding_cosine_similarity(emb1: List[float], emb2: List[float]) -> float:
-    """
-    计算embedding向量的余弦相似度
-    :param emb1: 图纸A的embedding（列表形式）
-    :param emb2: 图纸B的embedding（列表形式）
-    :return: 0-1之间的相似度值
-    """
-    # 处理空embedding
-    if not emb1 or not emb2:
-        return EMBEDDING_EMPTY_DEFAULT
-
-    # 转numpy数组并归一化（避免长度影响）
-    vec1 = np.array(emb1).reshape(1, -1)
-    vec2 = np.array(emb2).reshape(1, -1)
-
-    # 归一化
-    vec1 = vec1 / np.linalg.norm(vec1) if np.linalg.norm(vec1) != 0 else vec1
-    vec2 = vec2 / np.linalg.norm(vec2) if np.linalg.norm(vec2) != 0 else vec2
-
-    # 计算余弦相似度
-    sim = cosine_similarity(vec1, vec2)[0][0]
-    # 确保相似度在0-1之间（避免浮点误差导致负数）
-    return max(0.0, min(1.0, sim))
-
-
-def compare_single_annotation(anno_a: Dict, anno_b: Dict) -> Dict:
-    """
-    比对单个标注（A/B）的三个核心字段，计算综合评分
-    :param anno_a: 图纸A的单个标注字典
-    :param anno_b: 图纸B的单个标注字典
-    :return: 比对结果字典
-    """
-    # 1. category比对（精确匹配）
-    category_match = anno_a["category"] == anno_b["category"]
-    category_sim = 1.0 if category_match else 0.0
-
-    # 2. content比对（文本相似度）
-    content_sim = text_similarity(anno_a["content"], anno_b["content"])
-
-    # 3. embedding比对（向量余弦相似度）
-    embedding_sim = embedding_cosine_similarity(anno_a["embedding"], anno_b["embedding"])
-
-    # 4. 综合评分（加权求和）
-    total_sim = (
-            category_sim * FIELD_WEIGHTS["category"]
-            + content_sim * FIELD_WEIGHTS["content"]
-            + embedding_sim * FIELD_WEIGHTS["embedding"]
-    )
-
-    # 判定是否匹配（基于阈值）
-    is_match = total_sim >= SIMILARITY_THRESHOLD
-
-    return {
-        "uid": anno_a["uid"],
-        "category": {
-            "a": anno_a["category"],
-            "b": anno_b["category"],
-            "match": category_match,
-            "similarity": category_sim
-        },
-        "content": {
-            "a": anno_a["content"],
-            "b": anno_b["content"],
-            "similarity": round(content_sim, 4)
-        },
-        "embedding": {
-            "similarity": round(embedding_sim, 4)
-        },
-        "total_similarity": round(total_sim, 4),
-        "is_match": is_match
+def compare_view_annotations(a_annos: List[Dict[str, Any]], b_annos: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """比对单个view下的标注信息（先完成同category全量比对）"""
+    b_annos_copy = [anno.copy() for anno in b_annos]
+    view_diff = {
+        "matched": [],  # 完全匹配的标注对
+        "content_different": [],  # category/direction相同但content不同的标注对
+        "a_only": [],  # A独有标注
+        "b_only": [],  # B独有标注
+        "match_candidates": {}  # 匹配候选追溯（便于排查）
     }
 
+    for a_anno in a_annos:
+        a_uid = a_anno.get('uid', 'unknown')
+        a_category = a_anno.get('category')
+        a_direction = a_anno.get('direction')
+        a_content = a_anno.get('content')
 
-def compare_two_drawings(json_a_path: str, json_b_path: str) -> Dict:
-    """
-    比对两个图纸的JSON文件，生成完整比对报告
-    :param json_a_path: 图纸A的JSON路径
-    :param json_b_path: 图纸B的JSON路径
-    :return: 完整比对报告
-    """
-    # 1. 加载并校验数据
-    data_a = load_json(json_a_path)
-    data_b = load_json(json_b_path)
+        # 初始化该A标注的匹配候选追溯
+        view_diff["match_candidates"][a_uid] = {
+            "a_annotation": a_anno,
+            "same_category_candidates": [],  # 所有同category的B候选
+            "same_direction_candidates": [],  # 同category+同direction的B候选
+            "final_match": None,  # 最终匹配的B标注
+            "match_type": None  # 匹配类型：full_match/content_diff/none
+        }
 
-    # 2. 构建UID到标注的映射（方便快速匹配）
-    uid2anno_a = {anno["uid"]: anno for anno in data_a}
-    uid2anno_b = {anno["uid"]: anno for anno in data_b}
+        # 步骤1：筛选B中所有同category的候选（完成同category全量比对）
+        same_category_candidates = []
+        for b_anno in b_annos_copy:
+            if b_anno.get('category') == a_category:
+                same_category_candidates.append(b_anno)
+        view_diff["match_candidates"][a_uid]["same_category_candidates"] = same_category_candidates.copy()
 
-    # 3. 提取所有UID，分类处理
-    all_uids = set(uid2anno_a.keys()).union(set(uid2anno_b.keys()))
-    missing_in_a = [uid for uid in all_uids if uid not in uid2anno_a]  # B有A无
-    missing_in_b = [uid for uid in all_uids if uid not in uid2anno_b]  # A有B无
-    common_uids = [uid for uid in all_uids if uid in uid2anno_a and uid in uid2anno_b]  # 共有的UID
+        # 步骤2：在同category候选中，筛选同direction的次级候选
+        same_direction_candidates = []
+        for b_anno in same_category_candidates:
+            if b_anno.get('direction') == a_direction:
+                same_direction_candidates.append(b_anno)
+        view_diff["match_candidates"][a_uid]["same_direction_candidates"] = same_direction_candidates.copy()
 
-    # 4. 比对共有UID的标注
-    common_compare_results = []
-    for uid in common_uids:
-        res = compare_single_annotation(uid2anno_a[uid], uid2anno_b[uid])
-        common_compare_results.append(res)
+        # 步骤3：优先找完全匹配（category+direction+content均相同）
+        matched_b_anno: Optional[Dict[str, Any]] = None
+        match_index = -1
+        match_type = None
 
-    # 5. 统计整体结果
-    total_annotations = len(all_uids)
-    matched_count = sum([1 for res in common_compare_results if res["is_match"]])
-    common_count = len(common_uids)
-    match_rate = matched_count / common_count if common_count > 0 else 0.0
-    avg_similarity = np.mean([res["total_similarity"] for res in common_compare_results]) if common_count > 0 else 0.0
+        # 遍历所有同direction候选，找content完全匹配的
+        for idx, b_anno in enumerate(b_annos_copy):
+            if b_anno in same_direction_candidates and b_anno.get('content') == a_content:
+                matched_b_anno = b_anno
+                match_index = idx
+                match_type = "full_match"
+                break
 
-    # 6. 生成最终报告
-    report = {
+        # 步骤4：若无完全匹配，找content不同的（category+direction相同）
+        if matched_b_anno is None and len(same_direction_candidates) > 0:
+            for idx, b_anno in enumerate(b_annos_copy):
+                if b_anno in same_direction_candidates:
+                    matched_b_anno = b_anno
+                    match_index = idx
+                    match_type = "content_diff"
+                    break
+
+        # 步骤5：处理匹配结果
+        if match_index >= 0:
+            del b_annos_copy[match_index]  # 移除已匹配的B标注，避免重复匹配
+            view_diff["match_candidates"][a_uid]["final_match"] = matched_b_anno
+            view_diff["match_candidates"][a_uid]["match_type"] = match_type
+
+            if match_type == "full_match":
+                view_diff["matched"].append({
+                    "a_annotation": a_anno,
+                    "b_annotation": matched_b_anno
+                })
+            elif match_type == "content_diff":
+                view_diff["content_different"].append({
+                    "diff_field": "content",
+                    "a_content": a_content,
+                    "b_content": matched_b_anno.get('content'),
+                    "a_annotation": a_anno,
+                    "b_annotation": matched_b_anno,
+                    # 溯源关键信息
+                    "trace_info": {
+                        "a_uid": a_anno.get('uid'),
+                        "a_view": a_anno.get('view'),
+                        "a_bbox": a_anno.get('bbox'),
+                        "b_uid": matched_b_anno.get('uid'),
+                        "b_view": matched_b_anno.get('view'),
+                        "b_bbox": matched_b_anno.get('bbox')
+                    }
+                })
+        else:
+            # 同category全量比对后仍无匹配，标记为A独有
+            view_diff["a_only"].append({
+                "annotation": a_anno,
+                # 溯源关键信息
+                "trace_info": {
+                    "uid": a_anno.get('uid'),
+                    "view": a_anno.get('view'),
+                    "bbox": a_anno.get('bbox'),
+                    "category": a_anno.get('category'),
+                    "direction": a_anno.get('direction'),
+                    "content": a_anno.get('content')
+                }
+            })
+
+    # 剩余的B标注都是B独有，补充溯源信息
+    view_diff["b_only"] = [{
+        "annotation": b_anno,
+        "trace_info": {
+            "uid": b_anno.get('uid'),
+            "view": b_anno.get('view'),
+            "bbox": b_anno.get('bbox'),
+            "category": b_anno.get('category'),
+            "direction": b_anno.get('direction'),
+            "content": b_anno.get('content')
+        }
+    } for b_anno in b_annos_copy]
+
+    return view_diff
+
+
+def cross_view_match(a_unmatched: List[Dict[str, Any]], b_unmatched: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """跨view比对未配对的标注（补充溯源信息）"""
+    # 解析A未匹配项的原始标注（提取trace_info中的原始数据）
+    a_unmatched_raw = [item['annotation'] for item in a_unmatched]
+    b_unmatched_raw = [item['annotation'] for item in b_unmatched]
+
+    b_unmatched_copy = [anno.copy() for anno in b_unmatched_raw]
+    cross_result = {
+        "cross_view_matched": [],  # 跨view匹配的标注对
+        "final_a_only": [],  # 最终无匹配的A标注
+        "final_b_only": []  # 最终无匹配的B标注
+    }
+
+    for a_anno in a_unmatched_raw:
+        a_category = a_anno.get('category')
+        a_content = a_anno.get('content')
+        matched_b_idx = -1
+        matched_b_anno = None
+
+        # 跨view匹配：先全量比对同category候选，再判断content
+        same_category_candidates = [b for b in b_unmatched_copy if b.get('category') == a_category]
+        for idx, b_anno in enumerate(same_category_candidates):
+            if b_anno.get('content') == a_content:
+                matched_b_idx = b_unmatched_copy.index(b_anno)
+                matched_b_anno = b_anno
+                break
+
+        if matched_b_idx >= 0:
+            # 跨View匹配项（标注为"匹配差异"，便于溯源）
+            cross_result["cross_view_matched"].append({
+                "a_annotation": a_anno,
+                "b_annotation": matched_b_anno,
+                "a_view": a_anno.get('view', 'unknown'),
+                "b_view": b_anno.get('view', 'unknown'),
+                "match_rule": "category + content 一致（跨view）",
+                # 溯源关键信息
+                "trace_info": {
+                    "a_uid": a_anno.get('uid'),
+                    "a_view": a_anno.get('view'),
+                    "a_bbox": a_anno.get('bbox'),
+                    "a_category": a_anno.get('category'),
+                    "a_direction": a_anno.get('direction'),
+                    "b_uid": matched_b_anno.get('uid'),
+                    "b_view": matched_b_anno.get('view'),
+                    "b_bbox": matched_b_anno.get('bbox'),
+                    "b_category": matched_b_anno.get('category'),
+                    "b_direction": matched_b_anno.get('direction')
+                }
+            })
+            del b_unmatched_copy[matched_b_idx]
+        else:
+            # 最终A独有，补充溯源信息
+            cross_result["final_a_only"].append({
+                "annotation": a_anno,
+                "trace_info": {
+                    "uid": a_anno.get('uid'),
+                    "view": a_anno.get('view'),
+                    "bbox": a_anno.get('bbox'),
+                    "category": a_anno.get('category'),
+                    "direction": a_anno.get('direction'),
+                    "content": a_anno.get('content')
+                }
+            })
+
+    # 最终B独有，补充溯源信息
+    cross_result["final_b_only"] = [{
+        "annotation": b_anno,
+        "trace_info": {
+            "uid": b_anno.get('uid'),
+            "view": b_anno.get('view'),
+            "bbox": b_anno.get('bbox'),
+            "category": b_anno.get('category'),
+            "direction": b_anno.get('direction'),
+            "content": b_anno.get('content')
+        }
+    } for b_anno in b_unmatched_copy]
+
+    return cross_result
+
+
+def generate_diff_report(a_file: str, b_file: str, output_file: str = "diff_report.json") -> None:
+    """生成完整的差异比对报告（含统一的溯源差异详情）"""
+    # 加载并分组数据
+    a_data = load_json(a_file)
+    b_data = load_json(b_file)
+    a_groups = group_by_view(a_data)
+    b_groups = group_by_view(b_data)
+
+    # 初始化差异报告（新增diff_details统一汇总差异）
+    diff_report = {
+        "file_info": {
+            "base_file": a_file,
+            "compare_file": b_file,
+            "report_generated_time": str(__import__('datetime').datetime.now())  # 报告生成时间
+        },
         "summary": {
-            "total_annotations": total_annotations,
-            "common_annotations": common_count,
-            "missing_in_a": missing_in_a,  # B有A无的UID
-            "missing_in_b": missing_in_b,  # A有B无的UID
-            "matched_count": matched_count,
-            "match_rate": round(match_rate, 4),
-            "average_similarity": round(avg_similarity, 4),
-            "overall_match": match_rate >= SIMILARITY_THRESHOLD  # 整体是否匹配（基于匹配率）
+            "total_views": 0,  # 总比对view数
+            "views_with_diff": 0,  # 同View有差异的view数
+            "same_view_matched": 0,  # 同View完全匹配标注数
+            "same_view_content_diff": 0,  # 同View内容差异标注数
+            "same_view_a_only": 0,  # 同View A独有标注数
+            "same_view_b_only": 0,  # 同View B独有标注数
+            "cross_view_matched": 0,  # 跨View匹配标注数
+            "final_a_only_annotations": 0,  # 最终A独有标注数
+            "final_b_only_annotations": 0  # 最终B独有标注数
         },
-        "detail": common_compare_results
+        "same_view_details": {},  # 同View比对详情（含候选追溯）
+        "cross_view_details": {},  # 跨View比对详情
+        # 核心新增：统一的差异详情汇总（便于溯源）
+        "diff_details": {
+            "same_view_content_different": [],  # 同View内容差异（直接修改类）
+            "same_view_a_only": [],  # 同View A独有（跨View前）
+            "same_view_b_only": [],  # 同View B独有（跨View前）
+            "cross_view_matched": [],  # 跨View匹配（view不一致但内容一致）
+            "final_a_only": [],  # 最终A独有（无任何匹配，需重点溯源）
+            "final_b_only": []  # 最终B独有（无任何匹配，需重点溯源）
+        }
     }
 
-    return report
+    # 同View比对
+    all_views = set(a_groups.keys()).union(set(b_groups.keys()))
+    diff_report["summary"]["total_views"] = len(all_views)
+    global_a_unmatched = []
+    global_b_unmatched = []
+
+    for view in all_views:
+        a_annos = a_groups.get(view, [])
+        b_annos = b_groups.get(view, [])
+        view_diff = compare_view_annotations(a_annos, b_annos)
+
+        # 更新同View统计
+        diff_report["summary"]["same_view_matched"] += len(view_diff["matched"])
+        diff_report["summary"]["same_view_content_diff"] += len(view_diff["content_different"])
+        diff_report["summary"]["same_view_a_only"] += len(view_diff["a_only"])
+        diff_report["summary"]["same_view_b_only"] += len(view_diff["b_only"])
+        diff_report["same_view_details"][view] = view_diff
+
+        # 标记有差异的View
+        if any([len(view_diff[key]) > 0 for key in ["content_different", "a_only", "b_only"]]):
+            diff_report["summary"]["views_with_diff"] += 1
+
+        # 收集未匹配项（用于跨View比对）
+        global_a_unmatched.extend(view_diff["a_only"])
+        global_b_unmatched.extend(view_diff["b_only"])
+
+        # 核心：将同View差异信息整合到diff_details（溯源专用）
+        diff_report["diff_details"]["same_view_content_different"].extend(view_diff["content_different"])
+        diff_report["diff_details"]["same_view_a_only"].extend(view_diff["a_only"])
+        diff_report["diff_details"]["same_view_b_only"].extend(view_diff["b_only"])
+
+    # 跨View比对
+    cross_result = cross_view_match(global_a_unmatched, global_b_unmatched)
+    diff_report["summary"]["cross_view_matched"] = len(cross_result["cross_view_matched"])
+    diff_report["summary"]["final_a_only_annotations"] = len(cross_result["final_a_only"])
+    diff_report["summary"]["final_b_only_annotations"] = len(cross_result["final_b_only"])
+
+    # 整理跨View详情
+    diff_report["cross_view_details"] = cross_result
+    # 核心：将跨View差异信息整合到diff_details（溯源专用）
+    diff_report["diff_details"]["cross_view_matched"].extend(cross_result["cross_view_matched"])
+    diff_report["diff_details"]["final_a_only"].extend(cross_result["final_a_only"])
+    diff_report["diff_details"]["final_b_only"].extend(cross_result["final_b_only"])
+
+    # 保存报告（ensure_ascii=False保证中文/特殊字符正常）
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(diff_report, f, ensure_ascii=False, indent=2)
+
+    # 控制台输出（突出溯源关键信息）
+    print(f"✅ 差异比对报告生成完成！")
+    print(f"📊 比对汇总（溯源重点）：")
+    print(f"   - 总比对View数：{diff_report['summary']['total_views']}")
+    print(f"   - 同View内容差异数：{diff_report['summary']['same_view_content_diff']}（需核对content）")
+    print(f"   - 跨View匹配数：{diff_report['summary']['cross_view_matched']}（view不同但内容一致）")
+    print(f"   - 最终A独有数：{diff_report['summary']['final_a_only_annotations']}（无匹配，需重点溯源）")
+    print(f"   - 最终B独有数：{diff_report['summary']['final_b_only_annotations']}（无匹配，需重点溯源）")
+    print(f"📄 报告路径：{output_file}")
+    print(f"🔍 溯源关键字段：diff_details下的trace_info（uid/view/bbox）")
 
 
-def save_report(report: Dict, save_path: str):
-    """保存比对报告到JSON文件"""
-    with open(save_path, "w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=4)
-
-
-# ------------------- 示例调用 -------------------
 if __name__ == "__main__":
-    # 替换为实际的JSON文件路径
-    JSON_A_PATH = "drawing_a.json"
-    JSON_B_PATH = "drawing_b.json"
-    REPORT_SAVE_PATH = "drawing_compare_report.json"
-
-    try:
-        # 执行比对
-        compare_report = compare_two_drawings(JSON_A_PATH, JSON_B_PATH)
-
-        # 打印摘要信息
-        print("=== 图纸比对摘要 ===")
-        print(f"总标注数：{compare_report['summary']['total_annotations']}")
-        print(f"共有标注数：{compare_report['summary']['common_annotations']}")
-        print(f"A缺失的UID：{compare_report['summary']['missing_in_a']}")
-        print(f"B缺失的UID：{compare_report['summary']['missing_in_b']}")
-        print(f"匹配数：{compare_report['summary']['matched_count']}")
-        print(f"匹配率：{compare_report['summary']['match_rate']:.2%}")
-        print(f"平均综合相似度：{compare_report['summary']['average_similarity']:.2%}")
-        print(f"整体是否匹配：{compare_report['summary']['overall_match']}")
-
-        # 保存详细报告
-        save_report(compare_report, REPORT_SAVE_PATH)
-        print(f"\n详细比对报告已保存至：{REPORT_SAVE_PATH}")
-
-    except Exception as e:
-        print(f"比对失败：{str(e)}")
+    pass
+    # 配置文件路径
+    # SAMPLE_X_PATH = "../test_process/json_results/736420000_sd_merged_X.json"
+    # SAMPLE_Y_PATH = "../test_process/json_results/736420000_sd_merged_Y.json"
+    # REPORT_OUTPUT_PATH = "../test_process/json_results/compare_report.json"
+    #
+    # # 生成差异报告
+    # generate_diff_report(SAMPLE_Y_PATH, SAMPLE_X_PATH, REPORT_OUTPUT_PATH)

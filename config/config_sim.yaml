@@ -1,0 +1,21 @@
+CLASSNAME:
+- different
+- same
+DATA:
+  BATCHSIZES: 16
+  DATA_DIR: ./train_sim
+  IMG_SIZE:
+  - 224
+  - 224
+  NUM_WORKERS: 4
+MODEL:
+  CHECKPOINT: ./weights/best_sim.pt
+  EPOCHS: 40
+  LEARNING_RATE: 5.0e-05
+  LOSS_FUNCTION: BCEWithLogitsLoss
+  MODEL_NAME: resnet18
+  NUMCLASS: 64
+  OPTIM_FUNCTION: Adam
+WEIGHT:
+  SAVE_BEST: true
+  SAVE_WEIGHT_PATH: ./weights

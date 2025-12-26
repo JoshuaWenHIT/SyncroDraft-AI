@@ -3,6 +3,9 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+weights/
+data/
+test_process/
 # C extensions
 *.so
 
