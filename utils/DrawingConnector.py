@@ -175,7 +175,7 @@ class DrawingConnector:
             mid_point = ((t_center[0] + a_center[0]) // 2, (t_center[1] + a_center[1]) // 2)
             cv2.putText(vis_img, a_type, mid_point, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
 
-        cv2.imshow("Matches", vis_img)
+        # cv2.imshow("Matches", vis_img)
         cv2.imwrite("result_matches.png", vis_img)
         print(f"结果已保存为 result_matches.png")
         cv2.waitKey(0)

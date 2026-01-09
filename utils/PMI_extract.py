@@ -361,7 +361,7 @@ def process_single_image(img_path, model_arrow, model_obb, save_root, line_class
                     f"文本框 (ID {res['text_id']}) 匹配到了 -> 箭头 (ID {res['arrow_id']}, 类型: {res['arrow_type']})")
 
             # 保存可视化结果
-            # matcher.visualize(matches, arrow_boxes_for_matching)
+            matcher.visualize(matches, arrow_boxes_for_matching)
         else:
             print("\n>>> 没有line类型的对象，跳过箭头匹配过程")
 
