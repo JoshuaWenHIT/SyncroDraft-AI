@@ -189,20 +189,31 @@ def similarity_predict(image_path1, image_path2, output_path, predict_batch, sim
     predict_sim(sim_model, sim_dataloaders, threshold=sim_threshold, scale=10.0, output_path=output_path_sim, name=name)
     print(f"Predict completed! Result is saved in {output_path_sim}/{name}_predict_sim.csv")
 
-def image_preprocess(image_path1, image_path2, output_path, predict_batch, align_threshold, sim_threshold):
+def image_preprocess(image_path1, image_path2, image_path3, output_path, predict_batch, align_threshold, sim_threshold):
     # args = get_parse()
     # if not os.path.exists(args.output_dir):
     #     os.makedirs(args.output_dir)
-    print("=========================================")
+    # print("=========================================")
     det_path1 = main(image_path1, output_path, predict_batch, align_threshold)
-    print("=========================================")
+    # print("=========================================")
     det_path2 = main(image_path2, output_path, predict_batch, align_threshold)
-    print("=========================================")
+    # print("=========================================")
+    det_path3 = main(image_path3, output_path, predict_batch, align_threshold)
 
-    name_for_sim = os.path.basename(det_path1)
-    name_for_sim = name_for_sim.rsplit('_', 2)[0]
+def image_preprocess_2(image_path1, image_path2, output_path, predict_batch, align_threshold,
+                     sim_threshold):
+    # args = get_parse()
+    # if not os.path.exists(args.output_dir):
+    #     os.makedirs(args.output_dir)
+    # print("=========================================")
+    det_path1 = main(image_path1, output_path, predict_batch, align_threshold)
+    # print("=========================================")
+    det_path2 = main(image_path2, output_path, predict_batch, align_threshold)
 
-    similarity_predict(det_path1, det_path2, output_path, predict_batch, sim_threshold, name_for_sim)
+    # name_for_sim = os.path.basename(det_path1)
+    # name_for_sim = name_for_sim.rsplit('_', 2)[0]
+    #
+    # similarity_predict(det_path1, det_path2, output_path, predict_batch, sim_threshold, name_for_sim)
 
 if __name__ == "__main__":
     args = get_parse()

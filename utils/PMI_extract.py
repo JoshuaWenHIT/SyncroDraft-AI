@@ -12,11 +12,14 @@ import torch.nn as nn
 import sys
 from utils.demo_element_tools import DOLPHIN
 from utils.content_process import process_image_content
+import hashlib
 
 # ================= LINE分类配置 =================
 LINE_CLASSIFY_MODEL_PATH = './weights/best_line_classify_1.pth'
 LINE_CLASS_NAMES = ['asymmetric', 'basic', 'liner', 'reference', 'symmetric']
 
+def raw_str_hash(content):
+    return hashlib.md5(content.encode('utf-8')).hexdigest()
 
 def load_line_classify_model():
     """
@@ -289,6 +292,8 @@ def generate_json_output(img_path, res_obb, matches, save_dir, line_classifier_m
 
         json_results.append(entry)
 
+    sorted_json_results = sorted(json_results, key=lambda x: x["content"])
+
     # 保存JSON文件
     json_filename = f"{img_stem}_result.json"
     json_filedir = os.path.join(save_dir, "json_results")
@@ -297,10 +302,10 @@ def generate_json_output(img_path, res_obb, matches, save_dir, line_classifier_m
     json_filepath = os.path.join(json_filedir, json_filename)
 
     with open(json_filepath, 'w', encoding='utf-8') as f:
-        json.dump(json_results, f, indent=2, ensure_ascii=False)
+        json.dump(sorted_json_results, f, indent=2, ensure_ascii=False)
 
     print(f"JSON结果已保存到: {json_filepath}")
-    return json_results
+    return sorted_json_results
 
 
 def process_single_image(img_path, model_arrow, model_obb, save_root, line_classifier_model=None,
@@ -433,6 +438,19 @@ def process_once(img_folder, save_root):
 
         traceback.print_exc()
 
-def PMI_extract(img_folder_1, img_folder_2, save_root):
+def PMI_extract(img_folder_1, img_folder_2, img_folder_3, save_root):
     process_once(img_folder_1, save_root)
     process_once(img_folder_2, save_root)
+    process_once(img_folder_3, save_root)
+
+def PMI_extract_2(img_folder_1, img_folder_2, save_root):
+    process_once(img_folder_1, save_root)
+    process_once(img_folder_2, save_root)
+    # process_once(img_folder_3, save_root)
+
+def PMI_extract_once(img_folder_1, save_root):
+    process_once(img_folder_1, save_root)
+
+
+# if __name__ == '__main__':
+#     process_once("test_process/sub_views/740601001_sd_page_1","test_process/views_for_detection/test")

@@ -273,6 +273,11 @@ def generate_diff_report(a_file: str, b_file: str, output_file: str = "diff_repo
     for view in all_views:
         a_annos = a_groups.get(view, [])
         b_annos = b_groups.get(view, [])
+        # print("______________________________________________________________")
+        # print(a_annos)
+        # print("______________________________________________________________")
+        # print(b_annos)
+        # print("______________________________________________________________")
         view_diff = compare_view_annotations(a_annos, b_annos)
 
         # 更新同View统计
