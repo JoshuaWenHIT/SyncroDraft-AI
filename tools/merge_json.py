@@ -152,7 +152,10 @@
 
 import os
 import json
+import hashlib
 
+def raw_str_hash(content):
+    return hashlib.md5(content.encode('utf-8')).hexdigest()
 
 def merge_json_files(file_list):
     """
@@ -163,7 +166,9 @@ def merge_json_files(file_list):
     """
     if not file_list:
         return {}
-
+    # print("------------------------------------")
+    # print(file_list)
+    # print("------------------------------------")
     merged_data = None
     for file_path in file_list:
         try:
@@ -204,7 +209,8 @@ def get_common_prefix(image_prefix, file_list):
 
 def merge_main(image_prefix, json_results_path):
     # 初始化两个列表，分别存储带/不带revision的JSON文件
-    revision_files = []
+    revision_1_files = []
+    revision_2_files = []
     normal_files = []
 
     # 遍历当前目录的文件，分类存储
@@ -212,33 +218,47 @@ def merge_main(image_prefix, json_results_path):
         if not filename.endswith('.json'):
             continue  # 只处理JSON文件
 
-        if '_revision_' in filename and image_prefix in filename:
-            revision_files.append(os.path.join(json_results_path, filename))
+        if '_revision_1' in filename and image_prefix in filename:
+            revision_1_files.append(os.path.join(json_results_path, filename))
+        elif '_revision_2' in filename and image_prefix in filename:
+            revision_2_files.append(os.path.join(json_results_path, filename))
         elif '_merged_' not in filename and '_revision_' not in filename and 'compare_' not in filename and image_prefix in filename:
             normal_files.append(os.path.join(json_results_path, filename))
 
     # 提取公共前缀（优先从带revision的文件提取，若无则从普通文件提取）
-    common_prefix = get_common_prefix(image_prefix, revision_files if revision_files else normal_files)
+    common_prefix = get_common_prefix(image_prefix, revision_1_files if revision_1_files else normal_files)
 
-    # 合并带revision的文件，输出Y后缀
-    if revision_files:
-        merged_revision = merge_json_files(revision_files)
+    # 合并带revision_1的文件，输出Y后缀
+    if revision_1_files:
+        merged_revision = merge_json_files(revision_1_files)
+        merged_revision_1 = sorted(merged_revision, key=lambda x: x["content"], reverse=True)
         output_y = f"{common_prefix}_merged_Y.json"
         with open(output_y, 'w', encoding='utf-8') as f:
-            json.dump(merged_revision, f, ensure_ascii=False, indent=2)
-        print(f"✅ 已合并所有带revision的文件：{output_y}")
-        print(f"   源文件：{', '.join(revision_files)}")
+            json.dump(merged_revision_1, f, ensure_ascii=False, indent=2)
+        print(f"✅ 已合并带revision_1的文件：{output_y}")
+        print(f"   源文件：{', '.join(revision_1_files)}")
+
+    # 合并带revision_2的文件，输出Y后缀
+    if revision_2_files:
+        merged_revision = merge_json_files(revision_2_files)
+        merged_revision_2 = sorted(merged_revision, key=lambda x: x["content"], reverse=True)
+        output_y = f"{common_prefix}_merged_Z.json"
+        with open(output_y, 'w', encoding='utf-8') as f:
+            json.dump(merged_revision_2, f, ensure_ascii=False, indent=2)
+        print(f"✅ 已合并带revision_2的文件：{output_y}")
+        print(f"   源文件：{', '.join(revision_2_files)}")
 
     # 合并不带revision的文件，输出X后缀
     if normal_files:
         merged_normal = merge_json_files(normal_files)
+        merged_normal = sorted(merged_normal, key=lambda x: x["content"], reverse=True)
         output_x = f"{common_prefix}_merged_X.json"
         with open(output_x, 'w', encoding='utf-8') as f:
             json.dump(merged_normal, f, ensure_ascii=False, indent=2)
         print(f"\n✅ 已合并所有普通文件：{output_x}")
         print(f"   源文件：{', '.join(normal_files)}")
 
-    if not revision_files and not normal_files:
+    if not revision_1_files and not revision_2_files and not normal_files:
         print("⚠️  当前目录未找到任何JSON文件！")
 
 

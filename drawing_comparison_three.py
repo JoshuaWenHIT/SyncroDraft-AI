@@ -6,6 +6,8 @@ from tools.merge_json import merge_main
 from utils.compare import generate_diff_report
 from utils.json_to_excel import json_to_excel
 from tools.json_vis import json_vis
+from tools.watermark import add_watermark_to_excel
+from tools.lic import lic_match
 import argparse
 import os
 
@@ -24,7 +26,7 @@ def get_parse():
     # 1715761214
 
 if __name__ == '__main__':
-    # time.time()
+    assert lic_match()
     start_time = time.time()
     args = get_parse()
     if not os.path.exists(args.output_dir):
@@ -70,18 +72,10 @@ if __name__ == '__main__':
     )
 
     json_to_excel(
-        json_file=report_json_path_1,
-        excel_file=os.path.join(final_results_path, "{}_merged_X-Y.xlsx".format(image_prefix))
-    )
-
-    json_to_excel(
-        json_file=report_json_path_2,
-        excel_file=os.path.join(final_results_path, "{}_merged_X-Z.xlsx".format(image_prefix))
-    )
-
-    json_to_excel(
-        json_file=report_json_path_3,
-        excel_file=os.path.join(final_results_path, "{}_merged_Y-Z.xlsx".format(image_prefix))
+        json_file1=report_json_path_1,
+        json_file2=report_json_path_2,
+        json_file3=report_json_path_3,
+        excel_file=os.path.join(final_results_path, "{}_merged_X-Y-Z.xlsx".format(image_prefix))
     )
     # compare_report.json转到原始大图比对结果可视化
     image_folder = os.path.dirname(args.image_path1)
@@ -92,6 +86,9 @@ if __name__ == '__main__':
     json_vis(report_json_path_1, image_folder, output_folder_1, position_file_folder)
     json_vis(report_json_path_2, image_folder, output_folder_2, position_file_folder)
     json_vis(report_json_path_3, image_folder, output_folder_3, position_file_folder)
+
+    # add watermark
+    add_watermark_to_excel(os.path.join(final_results_path, "{}_merged_X-Y-Z.xlsx".format(image_prefix)), watermark_text="HIT-ICT")
     end_time = time.time()
     time_elapsed = end_time - start_time
     print("Time elapsed: {}".format(time_elapsed))

@@ -193,6 +193,133 @@ def process_annotations(json_data, image_folder, output_folder, position_file_fo
     # 4. 还原子视图bbox到原始图片
     # print("\n===== 还原子视图bbox到原始图片 =====")
     name = "_".join(uid.split("_")[:2])
+    pair_label = os.path.basename(output_folder)
+    # 可视化
+    position_info_dict = {}
+    image_name_dict = {}
+    for image in os.listdir(image_folder):
+        if image.startswith(f"{name}"):
+            image_basename = os.path.splitext(image)[0]
+            position_info = read_positions_file(os.path.join(position_file_folder, image_basename, "positions.txt"))
+            position_info_dict[image_basename] = position_info
+            if image_basename.startswith(f'{name}_revision_1'):
+                image_name_dict['revision_1'] = image_basename
+            elif image_basename.startswith(f'{name}_revision_2'):
+                image_name_dict['revision_2'] = image_basename
+            else:
+                image_name_dict['original'] = image_basename
+            copy_image(os.path.join(image_folder, image), os.path.join(output_folder, image))
+
+    if pair_label == "X-Y":
+        image_name_dict['revision'] = image_name_dict['revision_1']
+    elif pair_label == "X-Z":
+        image_name_dict['revision'] = image_name_dict['revision_2']
+    elif pair_label == "Y-Z":
+        image_name_dict['revision'] = image_name_dict['revision_2']
+        image_name_dict['original'] = image_name_dict['revision_1']
+
+    for item, uid, view, bbox, color in zip(item_list, uid_list, view_list, bbox_list, color_list):
+        if item == "same_view_content_different":
+            image_file = image_name_dict['revision'] + ".png"
+            img_input_path = os.path.join(output_folder, image_file)
+            view_position_info = position_info_dict[image_name_dict['revision']][uid]
+            draw_bbox_on_image(img_input_path, bbox, color, view_position_info)
+        elif item == "same_view_a_only":
+            image_file = image_name_dict['revision'] + ".png"
+            img_input_path = os.path.join(output_folder, image_file)
+            view_position_info = position_info_dict[image_name_dict['revision']][uid]
+            draw_bbox_on_image(img_input_path, bbox, color, view_position_info)
+        elif item == "same_view_b_only":
+            image_file = image_name_dict['original'] + ".png"
+            img_input_path = os.path.join(output_folder, image_file)
+            view_position_info = position_info_dict[image_name_dict['original']][uid]
+            draw_bbox_on_image(img_input_path, bbox, color, view_position_info)
+
+def process_annotations_2(json_data, image_folder, output_folder, position_file_folder):
+    """
+    处理所有标注项
+    :param json_data: 解析后的JSON数据
+    :param image_folder: 原始图片文件夹
+    :param output_folder: 标注后图片保存文件夹
+    """
+    # 创建输出文件夹
+    create_folder(output_folder)
+
+    item_list = []
+    uid_list = []
+    view_list = []
+    bbox_list = []
+    color_list = []
+
+    # 1. 处理 same_view_content_different（红框）
+    content_diff = json_data.get("diff_details", {}).get("same_view_content_different", [])
+    if isinstance(content_diff, list):
+        # print("\n===== 处理 same_view_content_different(红框)=====")
+        for item in content_diff:
+            # 提取必要字段
+            if "a_annotation" in item:
+                uid = item.get("a_annotation", {}).get("uid")
+                view = item.get("a_annotation", {}).get("view")
+                bbox = item.get("a_annotation", {}).get("bbox")
+
+            # 检查字段是否完整
+            if not all([uid, view, bbox]):
+                print(f"⚠️ 字段缺失，跳过项：{item}")
+                continue
+
+            item_list.append("same_view_content_different")
+            uid_list.append(uid)
+            view_list.append(view)
+            bbox_list.append(bbox)
+            color_list.append(RED)
+
+    # 2. 处理 same_view_a_only（蓝框）
+    a_only = json_data.get("diff_details", {}).get("same_view_a_only", [])
+    if isinstance(a_only, list):
+        # print("\n===== 处理 same_view_a_only(蓝框)=====")
+        for item in a_only:
+            # 提取必要字段
+            if "annotation" in item:
+                uid = item.get("annotation", {}).get("uid")
+                view = item.get("annotation", {}).get("view")
+                bbox = item.get("annotation", {}).get("bbox")
+
+            # 检查字段是否完整
+            if not all([uid, view, bbox]):
+                print(f"⚠️ 字段缺失，跳过项：{item}")
+                continue
+
+            item_list.append("same_view_a_only")
+            uid_list.append(uid)
+            view_list.append(view)
+            bbox_list.append(bbox)
+            color_list.append(BLUE)
+
+    # 3. 处理 same_view_b_only（橙框）
+    b_only = json_data.get("diff_details", {}).get("same_view_b_only", [])
+    if isinstance(b_only, list):
+        # print("\n===== 处理 same_view_b_only(橙框)=====")
+        for item in b_only:
+            # 提取必要字段
+            if "annotation" in item:
+                uid = item.get("annotation", {}).get("uid")
+                view = item.get("annotation", {}).get("view")
+                bbox = item.get("annotation", {}).get("bbox")
+
+            # 检查字段是否完整
+            if not all([uid, view, bbox]):
+                print(f"⚠️ 字段缺失，跳过项：{item}")
+                continue
+
+            item_list.append("same_view_b_only")
+            uid_list.append(uid)
+            view_list.append(view)
+            bbox_list.append(bbox)
+            color_list.append(ORANGE)
+
+    # 4. 还原子视图bbox到原始图片
+    # print("\n===== 还原子视图bbox到原始图片 =====")
+    name = "_".join(uid.split("_")[:2])
 
     # 可视化
     position_info_dict = {}
@@ -202,7 +329,7 @@ def process_annotations(json_data, image_folder, output_folder, position_file_fo
             image_basename = os.path.splitext(image)[0]
             position_info = read_positions_file(os.path.join(position_file_folder, image_basename, "positions.txt"))
             position_info_dict[image_basename] = position_info
-            if image_basename.startswith(f'{name}_revision'):
+            if image_basename.startswith(f'{name}_revision_1'):
                 image_name_dict['revision'] = image_basename
             else:
                 image_name_dict['original'] = image_basename
@@ -225,6 +352,7 @@ def process_annotations(json_data, image_folder, output_folder, position_file_fo
             view_position_info = position_info_dict[image_name_dict['original']][uid]
             draw_bbox_on_image(img_input_path, bbox, color, view_position_info)
 
+
 def json_vis(json_file_path, image_folder, output_folder, position_file_folder):
     # 1. 读取JSON文件
     try:
@@ -240,6 +368,24 @@ def json_vis(json_file_path, image_folder, output_folder, position_file_folder):
 
     # 2. 处理标注
     process_annotations(json_data, image_folder, output_folder, position_file_folder)
+
+    print("\n所有标注处理完成！")
+
+def json_vis_2(json_file_path, image_folder, output_folder, position_file_folder):
+    # 1. 读取JSON文件
+    try:
+        with open(json_file_path, "r", encoding="utf-8") as f:
+            json_data = json.load(f)
+        print("JSON文件读取成功")
+    except FileNotFoundError:
+        print(f"错误:JSON文件不存在 - {json_file_path}")
+        exit(1)
+    except json.JSONDecodeError:
+        print(f"错误:JSON文件格式无效 - {json_file_path}")
+        exit(1)
+
+    # 2. 处理标注
+    process_annotations_2(json_data, image_folder, output_folder, position_file_folder)
 
     print("\n所有标注处理完成！")
 
