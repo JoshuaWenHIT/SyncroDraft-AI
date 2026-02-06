@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图纸比对系统</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 原有标签/页面结构不变，仅修改 resultPage 中的 preview-img-box 部分 -->
+     <div class="header">
+        <!-- 修改 -->
+            <img class="school-logo" src="./drawing_server/source/img/hit.png" alt="校徽">   
+     <div class="tab-container">
+        <div class="tab active" id="inputTab">输入</div>
+        <div class="tab" id="resultTab">中间结果</div>
+        <div class="tab" id="finalTab">结果查看</div>
+    </div>
+
+    <!-- 输入页面（原有代码不变） -->
+    <div class="page active" id="inputPage">
+        <h2 style="font-size: 34px;">创建比对任务</h2>
+        <div class="upload-container">
+            <div class="upload-box">
+                <h3>文件组 1</h3>
+                <input
+                    type="file"
+                    id="imgInput1"
+                    accept=".xlsx,.xls,.png,.pdf,.jpg,.jpeg,.gif,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/pdf,image/*"
+                    multiple
+                    style="display: none;"
+                >
+
+                <input
+                    type="file"
+                    id="folderInput1"
+                    webkitdirectory
+                    directory
+                    multiple
+                    style="display: none;"
+                >
+<div class="upload-btn-row">
+                <button class="upload-btn" onclick="document.getElementById('imgInput1').click()">添加文件</button>
+                <button class="upload-btn upload-btn-folder" onclick="document.getElementById('folderInput1').click()">添加文件夹</button>
+            </div>
+                <p id="fileName1">未选择文件</p>
+<div id="previewMount1"></div>
+            </div>
+            <div class="upload-box">
+                <h3>文件组 2</h3>
+                <input
+                    type="file"
+                    id="imgInput2"
+                    accept=".xlsx,.xls,.png,.pdf,.jpg,.jpeg,.gif,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/pdf,image/*"
+                    multiple
+                    style="display: none;"
+                >
+
+                <input
+                    type="file"
+                    id="folderInput2"
+                    webkitdirectory
+                    directory
+                    multiple
+                    style="display: none;"
+                >
+<div class="upload-btn-row">
+                <button class="upload-btn" onclick="document.getElementById('imgInput2').click()">添加文件</button>
+                <button class="upload-btn upload-btn-folder" onclick="document.getElementById('folderInput2').click()">添加文件夹</button>
+            </div>
+                <p id="fileName2">未选择文件</p>
+<div id="previewMount2"></div>
+            </div>
+        </div>
+        <button id="startBtn" disabled>运行任务</button>
+    </div>
+
+    <!-- 中间结果页面（修改预览图片容器） -->
+    <div class="page" id="resultPage">
+        <div id="monitorDashboard" class="sub-view active">
+            <h2>过程监测</h2>
+            <div class="monitor-upper-grid">
+                <div id="tab-log" class="result-item detail-anchor-item">
+                    <div class="result-title">控制台日志</div>
+                    <div class="status-bar" style="margin-bottom: 10px; font-weight: bold;">
+                        当前状态: <span id="status-display">等待中</span>
+                        <!-- 👇 时间显示区域 -->
+                        <span style="margin-left: 20px;">
+                            耗时: <span id="timer-display" style="color: blue;">00:00</span>
+                        </span>
+                    </div>
+                    <div id="terminal-output" style="background: #ffffff; padding: 15px; font-family: monospace;margin: 10px 0; height: 300px; overflow-y: auto; overflow-x: hidden;">
+                    等待任务启动...
+                    </div>
+                </div>
+                <div class="monitor-data-grid">
+                    
+                    <!-- 统计数据容器 (去除 display: none) -->
+                    <div id="stats-container" class="result-item" style="flex:1;">
+                        <h4 style="margin: 10px auto;">📊 分析结果统计</h4>
+                        <!--<div style="display: flex; gap: 20px; flex-wrap: wrap;">-->
+                        <div style="display: grid; gap: 20px; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; height: 320px;">    
+                            <!-- 定义一个通用类 stat-value 用于 JS 批量控制 -->
+                            <div class="stat-item">
+                                <span class="label">总视图数:</span>
+                                <span id="stat-total" class="stat-value" style="font-size: 32px;">等待任务</span>
+                            </div>
+                            
+                            <div class="stat-item">
+                                <span class="label">发现差异视图:</span>
+                                <span id="stat-diff-views" class="stat-value" style="color: orange; font-size: 32px;">等待任务</span>
+                            </div>
+
+                            <div class="stat-item">
+                                <span class="label">跨View匹配:</span>
+                                <span id="stat-cross-match" class="stat-value" style="color: blue; font-size: 32px;">等待任务</span>
+                            </div>
+
+                            <div class="stat-item">
+                                <span class="label">最终差异(A):</span>
+                                <span id="stat-final-a" class="stat-value" style="color: red; font-size: 32px; font-weight: bold;">等待任务</span>
+                            </div>
+
+                            <div class="stat-item">
+                                <span class="label">最终差异(B):</span>
+                                <span id="stat-final-b" class="stat-value" style="color: red; font-size: 32px; font-weight: bold;">等待任务</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="monitor-grid">
+                <!-- 1. 三视图与截面 -->
+                <!-- 加上 id="card-preprocess" 和 class="pending" -->
+                <div id="card-preprocess" class="monitor-card pending" onclick="openDetail('preprocess')">
+                    <h3>1. 三视图与截面</h3>
+                    <!-- 加上 id="grid-preprocess" -->
+                    <div id="grid-preprocess" class="preview-grid">
+                        <!-- 初始占位内容 (任务开始后会被清空) -->
+                        <div class="text-placeholder" style="width:100%; text-align:center; color:#999;">等待生成...</div>
+                    </div>
+                </div>
+
+                <!-- 2. 箭头识别 -->
+                <div id="card-feature" class="monitor-card pending" onclick="openDetail('feature')">
+                    <h3>2. 箭头识别</h3>
+                    <div id="grid-feature" class="preview-grid">
+                        <div class="text-placeholder" style="width:100%; text-align:center; color:#999;">等待生成...</div>
+                    </div>
+                </div>
+
+                <!-- 3. 参数识别 -->
+                <div id="card-diff" class="monitor-card pending" onclick="openDetail('diff')">
+                    <h3>3. 参数识别</h3>
+                    <div id="grid-diff" class="preview-grid">
+                        <div class="text-placeholder" style="width:100%; text-align:center; color:#999;">等待生成...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 其他原有结构不变 -->
+        <div id="monitorDetail" class="sub-view">
+            <div class="detail-header">
+                <button class="back-btn" onclick="closeDetail()">← 返回概览</button>
+                <h3 id="detailTitle">详细数据展示</h3>
+            </div>
+            <div class="split-container" style="height: 65vh;">
+                <div class="top-panel">
+                    <h3>快速导航目录</h3>
+                    <ul class="directory-list" id="dynamicDirectory">
+                    </ul>
+                </div>
+                <div class="bottom-panel" id="dynamicContent">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结果查看页面（原有代码不变） -->
+    <div class="page" id="finalViewPage">
+        <h2 style="font-size: 34px;">比对结果详情</h2>
+        <div class="split-container">
+            <div class="top-panel" style="display: flex; gap: 20px;">
+                <div style="flex: 3; border-right: 1px solid #eee; padding-right: 20px;">
+                <h3 style="margin: 5px 0;">目录 (点击跳转)</h3>
+                <ul class="directory-list" id="comparison-directory-list">
+                    <li><a href="#error-001">暂无结果</a></li>
+                </ul>
+                </div>
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <!-- 状态文字 -->
+            <div id="excel-status-text" style="margin-bottom: 10px; color: #999; font-size: 14px;">
+                暂无结果
+            </div>
+            
+            <!-- 按钮 (默认禁用状态) -->
+            <button id="btn-open-excel" disabled 
+                style="padding: 8px 16px; 
+                    cursor: not-allowed; 
+                    background-color: #ccc; 
+                    color: white; 
+                    border: none; 
+                    border-radius: 4px; 
+                    transition: all 0.3s;">
+                打开 Excel 报表
+            </button>
+            </div>
+            </div>
+            <div class="bottom-panel" id="comparison-result-container">
+                <div id="error-001" class="result-item">
+                    <div class="result-title">暂无结果</div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <!-- 修改：增添PDF.js 主库 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<!-- 修改：增添PDF.js Worker（必须） -->
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+</script>
+<!-- 修改：增添专业的 Excel 操作 JavaScript 库 -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+</body>
+</html>

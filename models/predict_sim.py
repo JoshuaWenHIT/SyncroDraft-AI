@@ -9,8 +9,8 @@ cudnn.deterministic = True
 
 from models.load_config import load_config
 
-config = load_config('./config/config_sim.yaml')
-CLASS_NAMES = config['CLASSNAME']
+config = load_config("./config/config_sim.yaml")
+CLASS_NAMES = config["CLASSNAME"]
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -31,14 +31,16 @@ def predict_sim(model, dataloaders, threshold, scale, output_path, name):
 
         for i in range(len(paths1)):
             is_same = probs[i] > threshold
-            predict_list.append({
-                'image1': os.path.splitext(os.path.basename(paths1[i]))[0],
-                'image2': os.path.splitext(os.path.basename(paths2[i]))[0],
-                'similarity_score': probs[i],
-                'is_same': is_same,
-                'label': 'same' if is_same else 'different'
-            })
+            predict_list.append(
+                {
+                    "image1": os.path.splitext(os.path.basename(paths1[i]))[0],
+                    "image2": os.path.splitext(os.path.basename(paths2[i]))[0],
+                    "similarity_score": probs[i],
+                    "is_same": is_same,
+                    "label": "same" if is_same else "different",
+                }
+            )
 
     df = pd.DataFrame(predict_list)
-    csv_path = os.path.join(output_path, f'{name}_predict_sim.csv')
+    csv_path = os.path.join(output_path, f"{name}_predict_sim.csv")
     df.to_csv(csv_path, index=False)

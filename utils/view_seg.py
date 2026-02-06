@@ -41,7 +41,7 @@ def extract_subviews(image_path, first_name, output_dir):
         os.makedirs(os.path.join(output_dir))
 
     position_file_path = os.path.join(output_dir, "positions.txt")
-    with open(position_file_path, 'w') as pos_file:
+    with open(position_file_path, "w") as pos_file:
         pos_file.write("ID,x,y,w,h,center_x,center_y\n")  # 写入表头
 
     view_count = 0
@@ -49,7 +49,9 @@ def extract_subviews(image_path, first_name, output_dir):
     # 对轮廓进行排序（从上到下，从左到右），方便对应
     bounding_boxes = [cv2.boundingRect(c) for c in contours]
     # 将 contours 和 boxes 打包在一起排序
-    cnt_box_pairs = sorted(zip(contours, bounding_boxes), key=lambda b: (b[1][1], b[1][0]))
+    cnt_box_pairs = sorted(
+        zip(contours, bounding_boxes), key=lambda b: (b[1][1], b[1][0])
+    )
 
     for i, (cnt, (x, y, w, h)) in enumerate(cnt_box_pairs):
         # 过滤极小的噪点区域
@@ -76,10 +78,10 @@ def extract_subviews(image_path, first_name, output_dir):
         w_new = min(img.shape[1] - x_new, w + 2 * pad)
         h_new = min(img.shape[0] - y_new, h + 2 * pad)
 
-        final_view = result_canvas[y_new:y_new + h_new, x_new:x_new + w_new]
+        final_view = result_canvas[y_new : y_new + h_new, x_new : x_new + w_new]
 
         # 保存分割出来的子视图
-        pic_name = first_name.replace('view_', '', 1).rsplit('_', 2)[0]
+        pic_name = first_name.replace("view_", "", 1).rsplit("_", 2)[0]
         save_name = f"view_{view_count}.png"
         cv2.imwrite(f"{output_dir}/{pic_name}_{save_name}", final_view)
 
@@ -87,14 +89,20 @@ def extract_subviews(image_path, first_name, output_dir):
         center_x = x + w / 2
         center_y = y + h / 2
 
-        x_norm, y_norm, w_norm, h_norm, center_x_norm, center_y_norm = x / img.shape[1], y / img.shape[0], w / \
-                                                                       img.shape[1], h / img.shape[0], center_x / \
-                                                                       img.shape[1], center_y / img.shape[0]
+        x_norm, y_norm, w_norm, h_norm, center_x_norm, center_y_norm = (
+            x / img.shape[1],
+            y / img.shape[0],
+            w / img.shape[1],
+            h / img.shape[0],
+            center_x / img.shape[1],
+            center_y / img.shape[0],
+        )
 
         # 在保存分割出来的子视图前，先将位置信息写入txt文件
-        with open(position_file_path, 'a') as pos_file:
+        with open(position_file_path, "a") as pos_file:
             pos_file.write(
-                f"{pic_name}_view_{view_count},{x_norm:.4f},{y_norm:.4f},{w_norm:.4f},{h_norm:.4f},{center_x_norm:.4f},{center_y_norm:.4f}\n")
+                f"{pic_name}_view_{view_count},{x_norm:.4f},{y_norm:.4f},{w_norm:.4f},{h_norm:.4f},{center_x_norm:.4f},{center_y_norm:.4f}\n"
+            )
 
         # # --- B. 可视化调试  ---
         #

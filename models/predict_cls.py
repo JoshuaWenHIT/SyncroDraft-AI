@@ -10,8 +10,8 @@ cudnn.deterministic = True
 
 from models.load_config import load_config
 
-config = load_config('./config/config_cls.yaml')
-CLASS_NAMES = config['CLASSNAME']
+config = load_config("./config/config_cls.yaml")
+CLASS_NAMES = config["CLASSNAME"]
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -44,4 +44,6 @@ def predict_cls(model, dataloaders, output_dir):
         pred_class = predict_list[i]
         original_image = Image.open(path_list[i])
         pic_name = os.path.splitext(os.path.basename(path_list[i]))[0]
-        save_image_to_folder(original_image, os.path.join(output_dir, pred_class), f"{pic_name}.png")
+        save_image_to_folder(
+            original_image, os.path.join(output_dir, pred_class), f"{pic_name}.png"
+        )

@@ -3,7 +3,7 @@ import pandas as pd
 from pandas import ExcelWriter
 
 
-def flatten_dict(d, parent_key='', sep='_'):
+def flatten_dict(d, parent_key="", sep="_"):
     """将嵌套字典扁平化为单层字典"""
     items = []
     for k, v in d.items():
@@ -42,17 +42,17 @@ def process_diff_details(diff_details):
 def json_to_excel(json_file, excel_file):
     """将JSON文件中的diff_details转换为Excel文件"""
     # 读取JSON文件
-    with open(json_file, 'r', encoding='utf-8') as f:
+    with open(json_file, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     # 提取diff_details
-    diff_details = data.get('diff_details', {})
+    diff_details = data.get("diff_details", {})
 
     # 处理数据
     dfs, sheet_names = process_diff_details(diff_details)
 
     # 写入Excel
-    with ExcelWriter(excel_file, engine='openpyxl') as writer:
+    with ExcelWriter(excel_file, engine="openpyxl") as writer:
         for df, sheet_name in zip(dfs, sheet_names):
             # 截断过长的工作表名称（Excel限制为31个字符）
             truncated_name = sheet_name[:31]
@@ -62,7 +62,9 @@ def json_to_excel(json_file, excel_file):
             worksheet = writer.sheets[truncated_name]
             for column_cells in worksheet.columns:
                 length = max(len(str(cell.value)) for cell in column_cells)
-                worksheet.column_dimensions[column_cells[0].column_letter].width = min(length + 2, 50)
+                worksheet.column_dimensions[column_cells[0].column_letter].width = min(
+                    length + 2, 50
+                )
 
 
 if __name__ == "__main__":

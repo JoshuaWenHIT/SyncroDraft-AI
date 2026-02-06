@@ -11,9 +11,11 @@ cudnn.deterministic = True
 def load_model(config_file):
     # load configuration
     config = load_config(config_file)
-    MODEL_NAME = config['MODEL']['MODEL_NAME'] if config['MODEL']['MODEL_NAME'] else 'resnet50'
-    CHECKPOINT = config['MODEL']['CHECKPOINT'] if config['MODEL']['CHECKPOINT'] else ''
-    NUMCLASS = config['MODEL']['NUMCLASS'] if config['MODEL']['NUMCLASS'] else 2
+    MODEL_NAME = (
+        config["MODEL"]["MODEL_NAME"] if config["MODEL"]["MODEL_NAME"] else "resnet50"
+    )
+    CHECKPOINT = config["MODEL"]["CHECKPOINT"] if config["MODEL"]["CHECKPOINT"] else ""
+    NUMCLASS = config["MODEL"]["NUMCLASS"] if config["MODEL"]["NUMCLASS"] else 2
 
     try:
         if MODEL_NAME == "efficientnetb7":
@@ -22,11 +24,13 @@ def load_model(config_file):
                 model.classifier = nn.Linear(model.classifier[1].in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.efficientnet_b7(pretrained=True)
@@ -47,11 +51,13 @@ def load_model(config_file):
                 model.classifier = nn.Linear(model.classifier[1].in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.efficientnet_b6(pretrained=True)
@@ -72,11 +78,13 @@ def load_model(config_file):
                 model.classifier = nn.Linear(model.classifier[1].in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.efficientnet_b5(pretrained=True)
@@ -97,11 +105,13 @@ def load_model(config_file):
                 model.classifier = nn.Linear(model.classifier[1].in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.efficientnet_b4(pretrained=True)
@@ -122,11 +132,13 @@ def load_model(config_file):
                 model.classifier = nn.Linear(model.classifier[1].in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.efficientnet_b3(pretrained=True)
@@ -147,11 +159,13 @@ def load_model(config_file):
                 model.classifier = nn.Linear(model.classifier[1].in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.efficientnet_b2(pretrained=True)
@@ -172,11 +186,13 @@ def load_model(config_file):
                 model.classifier = nn.Linear(model.classifier[1].in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.efficientnet_b1(pretrained=True)
@@ -197,11 +213,13 @@ def load_model(config_file):
                 model.classifier = nn.Linear(model.classifier[1].in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.efficientnet_b0(pretrained=True)
@@ -216,8 +234,6 @@ def load_model(config_file):
             for param in model.classifier.parameters():
                 param.requires_grad = True
 
-
-
         # ====================================================
         # ======= RESNET =====================================
 
@@ -227,11 +243,13 @@ def load_model(config_file):
                 model.fc = nn.Linear(model.fc.in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.resnet18(pretrained=True)
@@ -252,11 +270,13 @@ def load_model(config_file):
                 model.fc = nn.Linear(model.fc.in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.resnet34(pretrained=True)
@@ -277,11 +297,13 @@ def load_model(config_file):
                 model.fc = nn.Linear(model.fc.in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.resnet50(pretrained=True)
@@ -303,11 +325,13 @@ def load_model(config_file):
                 model.fc = nn.Linear(model.fc.in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.resnet101(pretrained=True)
@@ -328,11 +352,13 @@ def load_model(config_file):
                 model.fc = nn.Linear(model.fc.in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.resnet152(pretrained=True)
@@ -353,18 +379,24 @@ def load_model(config_file):
         elif MODEL_NAME == "vgg19":
             if CHECKPOINT:
                 model = models.vgg19(pretrained=False)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.vgg19(pretrained=True)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
             for param in model.parameters():
                 param.requires_grad = False
@@ -378,18 +410,24 @@ def load_model(config_file):
         elif MODEL_NAME == "vgg19bn":
             if CHECKPOINT:
                 model = models.vgg19_bn(pretrained=False)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.vgg19_bn(pretrained=True)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
             for param in model.parameters():
                 param.requires_grad = False
@@ -403,18 +441,24 @@ def load_model(config_file):
         elif MODEL_NAME == "vgg16":
             if CHECKPOINT:
                 model = models.vgg16(pretrained=False)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.vgg16(pretrained=True)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
             for param in model.parameters():
                 param.requires_grad = False
@@ -428,18 +472,24 @@ def load_model(config_file):
         elif MODEL_NAME == "vgg16bn":
             if CHECKPOINT:
                 model = models.vgg16_bn(pretrained=False)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.vgg16_bn(pretrained=True)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
             for param in model.parameters():
                 param.requires_grad = False
@@ -453,18 +503,24 @@ def load_model(config_file):
         elif MODEL_NAME == "vgg13":
             if CHECKPOINT:
                 model = models.vgg13(pretrained=False)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.vgg13(pretrained=True)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
             for param in model.parameters():
                 param.requires_grad = False
@@ -478,18 +534,24 @@ def load_model(config_file):
         elif MODEL_NAME == "vgg13bn":
             if CHECKPOINT:
                 model = models.vgg13_bn(pretrained=False)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.vgg13_bn(pretrained=True)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
             for param in model.parameters():
                 param.requires_grad = False
@@ -503,18 +565,24 @@ def load_model(config_file):
         elif MODEL_NAME == "vgg11":
             if CHECKPOINT:
                 model = models.vgg11(pretrained=False)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.vgg11(pretrained=True)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
             for param in model.parameters():
                 param.requires_grad = False
@@ -528,18 +596,24 @@ def load_model(config_file):
         elif MODEL_NAME == "vgg11bn":
             if CHECKPOINT:
                 model = models.vgg11_bn(pretrained=False)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.vgg11_bn(pretrained=True)
-                model.classifier[6] = nn.Linear(model.classifier[-1].in_features, NUMCLASS)
+                model.classifier[6] = nn.Linear(
+                    model.classifier[-1].in_features, NUMCLASS
+                )
 
             for param in model.parameters():
                 param.requires_grad = False
@@ -559,11 +633,13 @@ def load_model(config_file):
                 model.fc = nn.Linear(model.fc.in_features, NUMCLASS)
 
                 if not torch.cuda.is_available():
-                    checkpoint = torch.load(CHECKPOINT, map_location=torch.device('cpu'))
+                    checkpoint = torch.load(
+                        CHECKPOINT, map_location=torch.device("cpu")
+                    )
                 else:
                     checkpoint = torch.load(CHECKPOINT)
 
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint["model_state_dict"])
 
             else:
                 model = models.googlenet(pretrained=True)
@@ -580,12 +656,12 @@ def load_model(config_file):
                 param.requires_grad = True
 
         #  update config
-        config['MODEL']['MODEL_NAME'] = MODEL_NAME
-        config['MODEL']['CHECKPOINT'] = CHECKPOINT
-        config['MODEL']['NUMCLASS'] = NUMCLASS
+        config["MODEL"]["MODEL_NAME"] = MODEL_NAME
+        config["MODEL"]["CHECKPOINT"] = CHECKPOINT
+        config["MODEL"]["NUMCLASS"] = NUMCLASS
         save_config(config, config_file)
 
         return model
     except:
-        print('Error: Could not load model.')
+        print("Error: Could not load model.")
         exit(1)

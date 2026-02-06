@@ -7,23 +7,19 @@ from setuptools._distutils.compat import numpy
 
 class StrictJSONStructure:
     """严格的JSON结构体类（支持校验+固定Key顺序）"""
+
     # 核心固定Key（必须按此顺序输出）
     CORE_KEYS: List[str] = [
         "uid",  # local pmi id
         "category",  # st(Symmetrical tolerance), at(Asymmetric tolerance), rd(Reference dimension), bd(Basic dimension), cfd(Circular feature dimension), fcf(Feature control frame), dp(Datum plane)
         "content",  # OCR results
-        "embedding"  # local feature tensor
+        "embedding",  # local feature tensor
     ]
     # 可选扩展Key（附加在核心Key之后，无固定顺序）
     OPTIONAL_KEYS: List[str] = ["ext_data", "tags", "operator"]
 
     def __init__(
-        self,
-        uid: int,
-        category: str,
-        content: str,
-        embedding: numpy.ndarray,
-        **kwargs
+        self, uid: int, category: str, content: str, embedding: numpy.ndarray, **kwargs
     ):
 
         # 核心字段校验
@@ -39,9 +35,13 @@ class StrictJSONStructure:
             if key in self.OPTIONAL_KEYS:
                 self.ext_fields[key] = value
             else:
-                raise ValueError(f"不支持的扩展字段：{key}（仅支持：{self.OPTIONAL_KEYS}）")
+                raise ValueError(
+                    f"不支持的扩展字段：{key}（仅支持：{self.OPTIONAL_KEYS}）"
+                )
 
-    def _validate_core_fields(self, uid: int, title: str, category: str, is_valid: bool):
+    def _validate_core_fields(
+        self, uid: int, title: str, category: str, is_valid: bool
+    ):
         """核心字段校验"""
         # 校验uid类型
         if not isinstance(uid, int):
@@ -50,9 +50,11 @@ class StrictJSONStructure:
         if not isinstance(title, str) or len(title.strip()) == 0:
             raise ValueError("title必须为非空字符串")
         # 校验category预定义值
-        allowed_categories = ['demo', 'prod', 'test']
+        allowed_categories = ["demo", "prod", "test"]
         if category not in allowed_categories:
-            raise ValueError(f"category必须为{allowed_categories}之一，当前值：{category}")
+            raise ValueError(
+                f"category必须为{allowed_categories}之一，当前值：{category}"
+            )
         # 校验is_valid类型
         if not isinstance(is_valid, bool):
             raise TypeError(f"is_valid必须为布尔值，当前类型：{type(is_valid)}")
@@ -60,9 +62,7 @@ class StrictJSONStructure:
     def to_dict(self, include_optional: bool = True) -> Dict[str, Any]:
         """转换为字典（保证核心Key顺序，可选字段附加在后）"""
         # 核心字段按固定顺序构造
-        core_dict = {
-            key: getattr(self, key) for key in self.CORE_KEYS
-        }
+        core_dict = {key: getattr(self, key) for key in self.CORE_KEYS}
         # 时间戳转换为字符串（便于JSON序列化）
         core_dict["timestamp"] = core_dict["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
 
@@ -83,7 +83,9 @@ class StrictJSONStructure:
         core_data = {key: data[key] for key in cls.CORE_KEYS if key in data}
         # 时间戳字符串转datetime
         if "timestamp" in core_data and isinstance(core_data["timestamp"], str):
-            core_data["timestamp"] = datetime.strptime(core_data["timestamp"], "%Y-%m-%d %H:%M:%S")
+            core_data["timestamp"] = datetime.strptime(
+                core_data["timestamp"], "%Y-%m-%d %H:%M:%S"
+            )
         # 提取可选字段
         optional_data = {key: data[key] for key in cls.OPTIONAL_KEYS if key in data}
         # 创建实例
@@ -101,7 +103,7 @@ if __name__ == "__main__":
             is_valid=True,
             ext_data={"info": "test"},
             tags=["python", "json"],
-            operator="admin"
+            operator="admin",
         )
 
         # 2. 转换为JSON（核心Key顺序固定，扩展字段附加在后）

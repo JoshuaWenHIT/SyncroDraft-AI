@@ -2,6 +2,7 @@ import json
 import cv2
 import os
 import shutil
+from drawing_server import log_utils
 
 # ====================== 配置参数======================
 JSON_FILE_PATH = "./test_process/json_results/compare_report.json"  # JSON文件路径
@@ -25,7 +26,7 @@ def create_folder(folder_path):
 def copy_image(image_path, output_path):
     """复制图片"""
     if not os.path.exists(image_path):
-        print(f"图片不存在")
+        log_utils.log(f"图片不存在")
         return
 
     # 复制图片
@@ -41,17 +42,17 @@ def read_positions_file(file_path):
     """
     positions = {}
     with open(file_path, "r") as f:
-        next(f) # positions.tx文件第一行是信息的名称，不需要读取
+        next(f)  # positions.tx文件第一行是信息的名称，不需要读取
         for line in f.readlines():
-            parts = line.strip().split(',')
+            parts = line.strip().split(",")
             # positions.tx文件中含含ID, x, y, w, h, center_x, center_y
             positions[parts[0]] = {
-                'x': float(parts[1]),
-                'y': float(parts[2]),
-                'w': float(parts[3]),
-                'h': float(parts[4]),
-                'center_x': float(parts[5]),
-                'center_y': float(parts[6])
+                "x": float(parts[1]),
+                "y": float(parts[2]),
+                "w": float(parts[3]),
+                "h": float(parts[4]),
+                "center_x": float(parts[5]),
+                "center_y": float(parts[6]),
             }
     return positions
 
@@ -66,40 +67,40 @@ def draw_bbox_on_image(image_path, bbox, color, positions_info):
     """
     # 检查图片是否存在
     if not os.path.exists(image_path):
-        print(f"⚠️ 图片不存在：{image_path}")
+        log_utils.log(f"⚠️ 图片不存在：{image_path}")
         return
 
     # 读取图片
     img = cv2.imread(image_path)
     original_h, original_w = img.shape[:2]
     if img is None:
-        print(f"⚠️ 无法读取图片：{image_path}")
+        log_utils.log(f"⚠️ 无法读取图片：{image_path}")
         return
 
     pad = 20  # 在子视图分割的代码./utils/view_seg.py中，为了使分割出来的子视图不要紧贴边界，在边界上加上一定的padding，这里同样需要考虑减掉这个padding
 
-    view_x = positions_info['x'] * original_w
-    view_y = positions_info['y'] * original_h
+    view_x = positions_info["x"] * original_w
+    view_y = positions_info["y"] * original_h
     bbox_x = bbox["x"] - pad
     bbox_y = bbox["y"] - pad
     bbox_w = bbox["width"]
     bbox_h = bbox["height"]
 
     new_bbox = {
-        'x': view_x + bbox_x,
-        'y': view_y + bbox_y,
-        'width': bbox_w,
-        'height': bbox_h
+        "x": view_x + bbox_x,
+        "y": view_y + bbox_y,
+        "width": bbox_w,
+        "height": bbox_h,
     }
 
-    new_bbox['x'] = max(0, min(original_w - new_bbox['width'], new_bbox['x']))
-    new_bbox['y'] = max(0, min(original_h - new_bbox['height'], new_bbox['y']))
+    new_bbox["x"] = max(0, min(original_w - new_bbox["width"], new_bbox["x"]))
+    new_bbox["y"] = max(0, min(original_h - new_bbox["height"], new_bbox["y"]))
 
-    x = int(new_bbox['x'])
-    y = int(new_bbox['y'])
+    x = int(new_bbox["x"])
+    y = int(new_bbox["y"])
     # 计算矩形右下角坐标（cv2.rectangle需要左上角和右下角）
-    x2 = int(x + new_bbox['width'])
-    y2 = int(y + new_bbox['height'])
+    x2 = int(x + new_bbox["width"])
+    y2 = int(y + new_bbox["height"])
 
     # 绘制矩形框
     cv2.rectangle(img, (x, y), (x2, y2), color, BOX_THICKNESS)
@@ -125,7 +126,9 @@ def process_annotations(json_data, image_folder, output_folder, position_file_fo
     color_list = []
 
     # 1. 处理 same_view_content_different（红框）
-    content_diff = json_data.get("diff_details", {}).get("same_view_content_different", [])
+    content_diff = json_data.get("diff_details", {}).get(
+        "same_view_content_different", []
+    )
     if isinstance(content_diff, list):
         # print("\n===== 处理 same_view_content_different(红框)=====")
         for item in content_diff:
@@ -137,7 +140,7 @@ def process_annotations(json_data, image_folder, output_folder, position_file_fo
 
             # 检查字段是否完整
             if not all([uid, view, bbox]):
-                print(f"⚠️ 字段缺失，跳过项：{item}")
+                log_utils.log(f"⚠️ 字段缺失，跳过项：{item}")
                 continue
 
             item_list.append("same_view_content_different")
@@ -159,7 +162,7 @@ def process_annotations(json_data, image_folder, output_folder, position_file_fo
 
             # 检查字段是否完整
             if not all([uid, view, bbox]):
-                print(f"⚠️ 字段缺失，跳过项：{item}")
+                log_utils.log(f"⚠️ 字段缺失，跳过项：{item}")
                 continue
 
             item_list.append("same_view_a_only")
@@ -181,7 +184,7 @@ def process_annotations(json_data, image_folder, output_folder, position_file_fo
 
             # 检查字段是否完整
             if not all([uid, view, bbox]):
-                print(f"⚠️ 字段缺失，跳过项：{item}")
+                log_utils.log(f"⚠️ 字段缺失，跳过项：{item}")
                 continue
 
             item_list.append("same_view_b_only")
@@ -200,48 +203,56 @@ def process_annotations(json_data, image_folder, output_folder, position_file_fo
     for image in os.listdir(image_folder):
         if image.startswith(f"{name}"):
             image_basename = os.path.splitext(image)[0]
-            position_info = read_positions_file(os.path.join(position_file_folder, image_basename, "positions.txt"))
+            position_info = read_positions_file(
+                os.path.join(position_file_folder, image_basename, "positions.txt")
+            )
             position_info_dict[image_basename] = position_info
-            if image_basename.startswith(f'{name}_revision'):
-                image_name_dict['revision'] = image_basename
+            if image_basename.startswith(f"{name}_revision"):
+                image_name_dict["revision"] = image_basename
             else:
-                image_name_dict['original'] = image_basename
-            copy_image(os.path.join(image_folder, image), os.path.join(output_folder, image))
+                image_name_dict["original"] = image_basename
+            copy_image(
+                os.path.join(image_folder, image), os.path.join(output_folder, image)
+            )
 
-    for item, uid, view, bbox, color in zip(item_list, uid_list, view_list, bbox_list, color_list):
+    for item, uid, view, bbox, color in zip(
+        item_list, uid_list, view_list, bbox_list, color_list
+    ):
         if item == "same_view_content_different":
-            image_file = image_name_dict['revision'] + ".png"
+            image_file = image_name_dict["revision"] + ".png"
             img_input_path = os.path.join(output_folder, image_file)
-            view_position_info = position_info_dict[image_name_dict['revision']][uid]
+            view_position_info = position_info_dict[image_name_dict["revision"]][uid]
             draw_bbox_on_image(img_input_path, bbox, color, view_position_info)
         elif item == "same_view_a_only":
-            image_file = image_name_dict['revision'] + ".png"
+            image_file = image_name_dict["revision"] + ".png"
             img_input_path = os.path.join(output_folder, image_file)
-            view_position_info = position_info_dict[image_name_dict['revision']][uid]
+            view_position_info = position_info_dict[image_name_dict["revision"]][uid]
             draw_bbox_on_image(img_input_path, bbox, color, view_position_info)
         elif item == "same_view_b_only":
-            image_file = image_name_dict['original'] + ".png"
+            image_file = image_name_dict["original"] + ".png"
             img_input_path = os.path.join(output_folder, image_file)
-            view_position_info = position_info_dict[image_name_dict['original']][uid]
+            view_position_info = position_info_dict[image_name_dict["original"]][uid]
             draw_bbox_on_image(img_input_path, bbox, color, view_position_info)
+
 
 def json_vis(json_file_path, image_folder, output_folder, position_file_folder):
     # 1. 读取JSON文件
     try:
         with open(json_file_path, "r", encoding="utf-8") as f:
             json_data = json.load(f)
-        print("JSON文件读取成功")
+        log_utils.log("JSON文件读取成功")
     except FileNotFoundError:
-        print(f"错误:JSON文件不存在 - {json_file_path}")
+        log_utils.log(f"错误:JSON文件不存在 - {json_file_path}")
         exit(1)
     except json.JSONDecodeError:
-        print(f"错误:JSON文件格式无效 - {json_file_path}")
+        log_utils.log(f"错误:JSON文件格式无效 - {json_file_path}")
         exit(1)
 
     # 2. 处理标注
     process_annotations(json_data, image_folder, output_folder, position_file_folder)
 
-    print("\n所有标注处理完成！")
+    log_utils.log("\n所有标注处理完成！")
+
 
 # ====================== 主程序 ======================
 if __name__ == "__main__":

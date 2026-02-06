@@ -1,0 +1,12 @@
+{
+    "liveServer.settings.ignoreFiles": [
+        "**/*.jpg",
+        "**/*.png",
+        "**/*.txt",
+        "**/*.json",
+        "**/*.jpeg",
+        "**/test_process/**",  // 假设你的 Django 把图片存在 media 文件夹
+        "**/static/**",
+        "**/db.sqlite3" // 忽略数据库文件变化
+    ]
+}

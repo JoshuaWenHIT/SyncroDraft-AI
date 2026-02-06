@@ -167,13 +167,14 @@ def merge_json_files(file_list):
     merged_data = None
     for file_path in file_list:
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
         except Exception as e:
             raise ValueError(f"读取文件{file_path}失败：{str(e)}")
 
         if merged_data is None:
             merged_data = data
+            # print(merged_data)
         else:
             if isinstance(merged_data, list) and isinstance(data, list):
                 merged_data.extend(data)
@@ -193,12 +194,12 @@ def get_common_prefix(image_prefix, file_list):
 
     # 取第一个文件作为基准，分割出公共前缀
     first_file = file_list[0]
-    if '_revision_' in first_file:
+    if "_revision_" in first_file:
         # 带revision的文件：按_revision_分割取前半部分
-        prefix = first_file.split('_revision_')[0]
+        prefix = first_file.split("_revision_")[0]
     else:
         # 不带revision的文件：按_view_分割取前半部分
-        prefix = first_file.split('_view_')[0]
+        prefix = first_file.split("_view_")[0]
     return prefix
 
 
@@ -209,22 +210,29 @@ def merge_main(image_prefix, json_results_path):
 
     # 遍历当前目录的文件，分类存储
     for filename in os.listdir(json_results_path):
-        if not filename.endswith('.json'):
+        if not filename.endswith(".json"):
             continue  # 只处理JSON文件
 
-        if '_revision_' in filename and image_prefix in filename:
+        if "_revision_" in filename and image_prefix in filename:
             revision_files.append(os.path.join(json_results_path, filename))
-        elif '_merged_' not in filename and '_revision_' not in filename and 'compare_' not in filename and image_prefix in filename:
+        elif (
+            "_merged_" not in filename
+            and "_revision_" not in filename
+            and "compare_" not in filename
+            and image_prefix in filename
+        ):
             normal_files.append(os.path.join(json_results_path, filename))
 
     # 提取公共前缀（优先从带revision的文件提取，若无则从普通文件提取）
-    common_prefix = get_common_prefix(image_prefix, revision_files if revision_files else normal_files)
+    common_prefix = get_common_prefix(
+        image_prefix, revision_files if revision_files else normal_files
+    )
 
     # 合并带revision的文件，输出Y后缀
     if revision_files:
         merged_revision = merge_json_files(revision_files)
         output_y = f"{common_prefix}_merged_Y.json"
-        with open(output_y, 'w', encoding='utf-8') as f:
+        with open(output_y, "w", encoding="utf-8") as f:
             json.dump(merged_revision, f, ensure_ascii=False, indent=2)
         print(f"✅ 已合并所有带revision的文件：{output_y}")
         print(f"   源文件：{', '.join(revision_files)}")
@@ -233,7 +241,7 @@ def merge_main(image_prefix, json_results_path):
     if normal_files:
         merged_normal = merge_json_files(normal_files)
         output_x = f"{common_prefix}_merged_X.json"
-        with open(output_x, 'w', encoding='utf-8') as f:
+        with open(output_x, "w", encoding="utf-8") as f:
             json.dump(merged_normal, f, ensure_ascii=False, indent=2)
         print(f"\n✅ 已合并所有普通文件：{output_x}")
         print(f"   源文件：{', '.join(normal_files)}")
@@ -243,5 +251,8 @@ def merge_main(image_prefix, json_results_path):
 
 
 if __name__ == "__main__":
-    merge_main(image_prefix="736420000_sd", json_results_path="/home/lab1523-4090/JoshuaWen/Code/Drawing-Comparison/test_process/json_results")
+    merge_main(
+        image_prefix="736420000_sd",
+        json_results_path=r"D:\Drawing-Comparison\test_process\json_results",
+    )
     print("\n📌 合并完成！")

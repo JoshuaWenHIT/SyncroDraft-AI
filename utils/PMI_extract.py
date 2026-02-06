@@ -12,10 +12,11 @@ import torch.nn as nn
 import sys
 from utils.demo_element_tools import DOLPHIN
 from utils.content_process import process_image_content
+from drawing_server import log_utils
 
 # ================= LINE分类配置 =================
-LINE_CLASSIFY_MODEL_PATH = './weights/best_line_classify_1.pth'
-LINE_CLASS_NAMES = ['asymmetric', 'basic', 'liner', 'reference', 'symmetric']
+LINE_CLASSIFY_MODEL_PATH = "./weights/best_line_classify_1.pth"
+LINE_CLASS_NAMES = ["asymmetric", "basic", "liner", "reference", "symmetric"]
 
 
 def load_line_classify_model():
@@ -43,14 +44,16 @@ def classify_line_image(model, device, image_path):
     """
     try:
         # 图片预处理 (必须与训练集 val 阶段一致)
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ])
+        transform = transforms.Compose(
+            [
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            ]
+        )
 
         # 读取图片并推理
-        image = Image.open(image_path).convert('RGB')
+        image = Image.open(image_path).convert("RGB")
         image_tensor = transform(image).unsqueeze(0).to(device)  # 增加 batch 维度
 
         with torch.no_grad():
@@ -62,7 +65,7 @@ def classify_line_image(model, device, image_path):
         idx = preds.item()
         return LINE_CLASS_NAMES[idx], conf.item()
     except Exception as e:
-        print(f"分类图像 {image_path} 时出错: {e}")
+        log_utils.log(f"分类图像 {image_path} 时出错: {e}")
         return "line", 0.0  # 出错时返回默认值
 
 
@@ -77,9 +80,9 @@ def detect_arrow(model, img_path, output_dir, conf=0.3):
         conf=conf,
         save=True,
         project=output_dir,
-        name='std_detection',
+        name="std_detection",
         exist_ok=True,
-        show=False
+        show=False,
     )
 
     detected_data = []
@@ -106,14 +109,16 @@ def detect_arrow(model, img_path, output_dir, conf=0.3):
             # 生成唯一ID
             unique_id = f"{img_stem}_{cls_name}_{i:04d}"
 
-            detected_data.append({
-                "id": unique_id,  # 添加唯一ID
-                "class_id": cls_id,
-                "class_name": cls_name,
-                # 返回 [x_tl, y_tl, w, h]
-                "bbox_xywh": [int(x_top_left), int(y_top_left), int(w), int(h)],
-                "conf": round(float(boxes_conf[i]), 4)
-            })
+            detected_data.append(
+                {
+                    "id": unique_id,  # 添加唯一ID
+                    "class_id": cls_id,
+                    "class_name": cls_name,
+                    # 返回 [x_tl, y_tl, w, h]
+                    "bbox_xywh": [int(x_top_left), int(y_top_left), int(w), int(h)],
+                    "conf": round(float(boxes_conf[i]), 4),
+                }
+            )
 
     return detected_data
 
@@ -129,10 +134,10 @@ def detect_obb_lines(model, img_path, output_dir, conf=0.25):
         conf=conf,
         save=True,
         project=output_dir,
-        name='obb_detection',
+        name="obb_detection",
         exist_ok=True,
         show=False,
-        imgsz=1024
+        imgsz=1024,
     )
 
     obb_data = []
@@ -193,23 +198,35 @@ def detect_obb_lines(model, img_path, output_dir, conf=0.25):
                     # 保存裁剪后的图像
                     if cropped_img.size > 0:  # 确保裁剪后的图像不为空
                         cv2.imwrite(cropped_save_path, cropped_img)
-                        print(f"已保存检测目标图像: {cropped_save_path}")
+                        log_utils.log(f"已保存检测目标图像: {cropped_save_path}")
             except Exception as e:
-                print(f"保存检测目标图像时出错: {e}")
+                log_utils.log(f"保存检测目标图像时出错: {e}")
 
-        obb_data.append({
-            "id": unique_id,
-            "class_name": class_name,
-            # 返回 [x_tl, y_tl, w, h]
-            "bbox_xywh": [float(f"{v:.2f}") for v in [x_top_left, y_top_left, w, h]],
-            "angle": round(rotation_deg, 2),
-            "conf": round(float(scores[i]), 4)
-        })
+        obb_data.append(
+            {
+                "id": unique_id,
+                "class_name": class_name,
+                # 返回 [x_tl, y_tl, w, h]
+                "bbox_xywh": [
+                    float(f"{v:.2f}") for v in [x_top_left, y_top_left, w, h]
+                ],
+                "angle": round(rotation_deg, 2),
+                "conf": round(float(scores[i]), 4),
+            }
+        )
 
     return obb_data
 
 
-def generate_json_output(img_path, res_obb, matches, save_dir, line_classifier_model=None, line_classifier_device=None, ocr_model=None):
+def generate_json_output(
+    img_path,
+    res_obb,
+    matches,
+    save_dir,
+    line_classifier_model=None,
+    line_classifier_device=None,
+    ocr_model=None,
+):
     """
     生成指定格式的JSON文件，对line类型进行细分类
     """
@@ -253,17 +270,23 @@ def generate_json_output(img_path, res_obb, matches, save_dir, line_classifier_m
         if item["class_name"] == "line":
             # 构造裁剪图像的路径
 
-
             # 如果找到了对应的裁剪图像，则进行分类
             if os.path.exists(cropped_image_path) and line_classifier_model is not None:
-                classified_type, confidence = classify_line_image(line_classifier_model, line_classifier_device,
-                                                                  cropped_image_path)
+                classified_type, confidence = classify_line_image(
+                    line_classifier_model, line_classifier_device, cropped_image_path
+                )
                 category = classified_type
-                print(f"ID {item['id']} 的line分类为: {classified_type} (置信度: {confidence:.4f})")
+                log_utils.log(
+                    f"ID {item['id']} 的line分类为: {classified_type} (置信度: {confidence:.4f})"
+                )
             else:
-                print(f"未找到裁剪图像 {cropped_image_path} 或分类模型未加载，使用默认line分类")
+                log_utils.log(
+                    f"未找到裁剪图像 {cropped_image_path} 或分类模型未加载，使用默认line分类"
+                )
 
-        text_content = process_image_content(cropped_image_path, element_type="text", ocr_model=ocr_model)
+        text_content = process_image_content(
+            cropped_image_path, element_type="text", ocr_model=ocr_model
+        )
 
         entry = {
             "uid": uid,
@@ -275,8 +298,8 @@ def generate_json_output(img_path, res_obb, matches, save_dir, line_classifier_m
                 "x": item["bbox_xywh"][0],
                 "y": item["bbox_xywh"][1],
                 "width": item["bbox_xywh"][2],
-                "height": item["bbox_xywh"][3]
-            }
+                "height": item["bbox_xywh"][3],
+            },
         }
 
         # 如果是line类型，检查是否有匹配的箭头方向
@@ -296,32 +319,41 @@ def generate_json_output(img_path, res_obb, matches, save_dir, line_classifier_m
 
     json_filepath = os.path.join(json_filedir, json_filename)
 
-    with open(json_filepath, 'w', encoding='utf-8') as f:
+    with open(json_filepath, "w", encoding="utf-8") as f:
         json.dump(json_results, f, indent=2, ensure_ascii=False)
 
-    print(f"JSON结果已保存到: {json_filepath}")
+    log_utils.log(f"JSON结果已保存到: {json_filepath}")
     return json_results
 
 
-def process_single_image(img_path, model_arrow, model_obb, save_root, line_classifier_model=None,
-                         line_classifier_device=None, ocr_model=None):
+def process_single_image(
+    img_path,
+    model_arrow,
+    model_obb,
+    save_root,
+    line_classifier_model=None,
+    line_classifier_device=None,
+    ocr_model=None,
+):
     """
     处理单张图像
     """
-    print(f"\n>>> 正在处理图像: {img_path}")
+    log_utils.log(f"\n>>> 正在处理图像: {img_path}")
 
     try:
         # 1. 测试常规检测 (Top-Left xywh) - 仅用于line类型的箭头匹配
-        print("\n>>> 常规检测结果:")
+        log_utils.log("\n>>> 常规检测结果:")
         res_arrow = detect_arrow(model_arrow, str(img_path), save_root)
         for r in res_arrow:
-            print(f"ID: {r['id']}, Type: {r['class_name']}, Box(TL): {r['bbox_xywh']}")
+            log_utils.log(f"ID: {r['id']}, Type: {r['class_name']}, Box(TL): {r['bbox_xywh']}")
 
         # 2. 测试 OBB 检测 (Top-Left xywh + Angle) - 输出所有类别
-        print("\n>>> 旋转检测结果:")
+        log_utils.log("\n>>> 旋转检测结果:")
         res_obb = detect_obb_lines(model_obb, str(img_path), save_root)
         for r in res_obb:
-            print(f"ID: {r['id']}, Type: {r['class_name']}, Box(TL): {r['bbox_xywh']}, Angle: {r['angle']}")
+            log_utils.log(
+                f"ID: {r['id']}, Type: {r['class_name']}, Box(TL): {r['bbox_xywh']}, Angle: {r['angle']}"
+            )
 
         # 准备文本框和箭头框数据供匹配使用
         # 仅对line类型进行箭头匹配
@@ -331,21 +363,20 @@ def process_single_image(img_path, model_arrow, model_obb, save_root, line_class
             if item["class_name"] == "line":
                 # 确保边界框坐标是整数类型
                 bbox = [int(coord) for coord in item["bbox_xywh"]]
-                line_text_boxes.append({
-                    "id": item["id"],
-                    "bbox": bbox
-                })
+                line_text_boxes.append({"id": item["id"], "bbox": bbox})
 
         # 仅使用箭头检测结果中需要匹配的部分
         arrow_boxes_for_matching = []
         for item in res_arrow:
             # 确保边界框坐标是整数类型
             bbox = [int(coord) for coord in item["bbox_xywh"]]
-            arrow_boxes_for_matching.append({
-                "id": item["id"],
-                "bbox": bbox,
-                "type": item["class_name"]  # 添加类型信息
-            })
+            arrow_boxes_for_matching.append(
+                {
+                    "id": item["id"],
+                    "bbox": bbox,
+                    "type": item["class_name"],  # 添加类型信息
+                }
+            )
 
         # 只有当存在line类型文本框时才执行匹配
         matches = []
@@ -355,26 +386,35 @@ def process_single_image(img_path, model_arrow, model_obb, save_root, line_class
             matches = matcher.find_matches(line_text_boxes, arrow_boxes_for_matching)
 
             # 打印文本结果
-            print("\n--- 匹配结果 ---")
+            log_utils.log("\n--- 匹配结果 ---")
             for res in matches:
-                print(
-                    f"文本框 (ID {res['text_id']}) 匹配到了 -> 箭头 (ID {res['arrow_id']}, 类型: {res['arrow_type']})")
+                log_utils.log(
+                    f"文本框 (ID {res['text_id']}) 匹配到了 -> 箭头 (ID {res['arrow_id']}, 类型: {res['arrow_type']})"
+                )
 
             # 保存可视化结果
             matcher.visualize(matches, arrow_boxes_for_matching)
         else:
-            print("\n>>> 没有line类型的对象，跳过箭头匹配过程")
+            log_utils.log("\n>>> 没有line类型的对象，跳过箭头匹配过程")
 
         # 生成指定格式的JSON文件
-        print("\n>>> 生成JSON文件...")
-        json_results = generate_json_output(img_path, res_obb, matches, save_root, line_classifier_model,
-                                            line_classifier_device, ocr_model)
-        print(f"生成了 {len(json_results)} 个JSON条目")
+        log_utils.log("\n>>> 生成JSON文件...")
+        json_results = generate_json_output(
+            img_path,
+            res_obb,
+            matches,
+            save_root,
+            line_classifier_model,
+            line_classifier_device,
+            ocr_model,
+        )
+        log_utils.log(f"生成了 {len(json_results)} 个JSON条目")
 
         return True
     except Exception as e:
-        print(f"处理图像 {img_path} 时出错: {e}")
+        log_utils.log(f"处理图像 {img_path} 时出错: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -383,29 +423,29 @@ def process_single_image(img_path, model_arrow, model_obb, save_root, line_class
 #  调用测试
 # ==========================================
 def process_once(img_folder, save_root):
-    arrow_model_path = './weights/best_arrow_det.pt'
-    obb_model_path = './weights/best_line_det.pt'
-    ocr_model_path = './weights/hf_model'
+    arrow_model_path = "./weights/best_arrow_det.pt"
+    obb_model_path = "./weights/best_line_det.pt"
+    ocr_model_path = "./weights/hf_model"
     # 支持的图像格式
-    supported_formats = ('.png', '.jpg', '.jpeg', '.bmp', '.tiff')
+    supported_formats = (".png", ".jpg", ".jpeg", ".bmp", ".tiff")
 
     try:
         # 加载LINE分类模型
-        print("正在加载LINE分类模型...")
+        log_utils.log("正在加载LINE分类模型...")
         line_classifier_model, line_classifier_device = load_line_classify_model()
-        print("LINE分类模型加载完成")
+        log_utils.log("LINE分类模型加载完成")
 
         # 加载检测模型
-        print("正在加载检测模型...")
+        log_utils.log("正在加载检测模型...")
         model_arrow = YOLO(arrow_model_path)
         model_obb = YOLO(obb_model_path)
-        print("检测模型加载完成")
+        log_utils.log("检测模型加载完成")
 
         # 加载OCR识别模型
 
-        print("正在加载OCR识别模型...")
+        log_utils.log("正在加载OCR识别模型...")
         ocr_model = DOLPHIN(ocr_model_path)
-        print("OCR识别模型加载完成")
+        log_utils.log("OCR识别模型加载完成")
 
         # 获取文件夹中所有图像文件
         img_paths = []
@@ -413,25 +453,33 @@ def process_once(img_folder, save_root):
             for file in os.listdir(img_folder):
                 if file.lower().endswith(supported_formats):
                     img_paths.append(os.path.join(img_folder, file))
-            print(f"找到 {len(img_paths)} 个图像文件")
+            log_utils.log(f"找到 {len(img_paths)} 个图像文件")
         else:
-            print(f"指定的路径不是一个有效的文件夹: {img_folder}")
+            log_utils.log(f"指定的路径不是一个有效的文件夹: {img_folder}")
             exit(1)
 
         # 处理所有图像
         success_count = 0
         for img_path in img_paths:
-            if process_single_image(Path(img_path), model_arrow, model_obb, save_root, line_classifier_model,
-                                    line_classifier_device, ocr_model):
+            if process_single_image(
+                Path(img_path),
+                model_arrow,
+                model_obb,
+                save_root,
+                line_classifier_model,
+                line_classifier_device,
+                ocr_model,
+            ):
                 success_count += 1
 
-        print(f"\n处理完成！成功处理 {success_count}/{len(img_paths)} 张图像。")
+        log_utils.log(f"\n处理完成！成功处理 {success_count}/{len(img_paths)} 张图像。")
 
     except Exception as e:
-        print(f"运行出错: {e}")
+        log_utils.log(f"运行出错: {e}")
         import traceback
 
         traceback.print_exc()
+
 
 def PMI_extract(img_folder_1, img_folder_2, save_root):
     process_once(img_folder_1, save_root)

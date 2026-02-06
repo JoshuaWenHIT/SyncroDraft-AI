@@ -59,9 +59,7 @@ class DOLPHIN:
         # Prepare prompt
         prompt = f"<s>{prompt} <Answer/>"
         prompt_ids = self.tokenizer(
-            prompt,
-            add_special_tokens=False,
-            return_tensors="pt"
+            prompt, add_special_tokens=False, return_tensors="pt"
         ).input_ids.to(self.device)
 
         decoder_attention_mask = torch.ones_like(prompt_ids)
@@ -79,12 +77,19 @@ class DOLPHIN:
             bad_words_ids=[[self.tokenizer.unk_token_id]],
             return_dict_in_generate=True,
             do_sample=False,
-            num_beams=1
+            num_beams=1,
         )
 
         # Process the output
-        sequence = self.tokenizer.batch_decode(outputs.sequences, skip_special_tokens=False)[0]
-        sequence = sequence.replace(prompt, "").replace("<pad>", "").replace("</s>", "").strip()
+        sequence = self.tokenizer.batch_decode(
+            outputs.sequences, skip_special_tokens=False
+        )[0]
+        sequence = (
+            sequence.replace(prompt, "")
+            .replace("<pad>", "")
+            .replace("</s>", "")
+            .strip()
+        )
 
         return sequence
 
@@ -176,9 +181,18 @@ def recognize_element(image_path, element_type="text", ocr_model=None, save_dir=
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Element-level processing using DOLPHIN model")
-    parser.add_argument("--model_path", default="./hf_model", help="Path to Hugging Face model")
-    parser.add_argument("--input_path", type=str, required=True, help="Path to input image or directory of images")
+    parser = argparse.ArgumentParser(
+        description="Element-level processing using DOLPHIN model"
+    )
+    parser.add_argument(
+        "--model_path", default="./hf_model", help="Path to Hugging Face model"
+    )
+    parser.add_argument(
+        "--input_path",
+        type=str,
+        required=True,
+        help="Path to input image or directory of images",
+    )
     parser.add_argument(
         "--element_type",
         type=str,
@@ -192,7 +206,11 @@ def main():
         default=None,
         help="Directory to save parsing results (default: same as input directory)",
     )
-    parser.add_argument("--print_results", action="store_true", help="Print recognition results to console")
+    parser.add_argument(
+        "--print_results",
+        action="store_true",
+        help="Print recognition results to console",
+    )
     args = parser.parse_args()
 
     # Load Model
@@ -200,7 +218,9 @@ def main():
 
     # Set save directory
     save_dir = args.save_dir or (
-        args.input_path if os.path.isdir(args.input_path) else os.path.dirname(args.input_path)
+        args.input_path
+        if os.path.isdir(args.input_path)
+        else os.path.dirname(args.input_path)
     )
     setup_output_dirs(save_dir)
 

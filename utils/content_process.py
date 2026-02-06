@@ -2,23 +2,21 @@ from utils.demo_element_tools import recognize_element
 
 import re
 
+
 def normalize_text(raw_text: str) -> str:
     """
     输入：原始文本
     输出：修正后的内容
     """
     text = raw_text
+
     # ---------- 结构修复 1：LaTeX 分式 $\frac{A}{B}$ ----------
     def repl_frac(m):
         top = m.group(1).strip()
         bottom = m.group(2).strip()
         return f"{top}\n{bottom}"
 
-    text = re.sub(
-        r"\$?\s*\\frac\{([^{}]+)\}\{([^{}]+)\}\s*\$?",
-        repl_frac,
-        text
-    )
+    text = re.sub(r"\$?\s*\\frac\{([^{}]+)\}\{([^{}]+)\}\s*\$?", repl_frac, text)
 
     # ---------- 结构修复 2：数值 + 下划线 + 说明 ----------
     text = re.sub(
@@ -30,7 +28,7 @@ def normalize_text(raw_text: str) -> str:
         """,
         r"\1\n\2",
         text,
-        flags=re.VERBOSE
+        flags=re.VERBOSE,
     )
 
     # ---------- 规则 5：上下公差 ----------
@@ -43,7 +41,7 @@ def normalize_text(raw_text: str) -> str:
     text = re.sub(
         r"\$?\s*(\d+(?:\.\d+)?)_\{-([\d.]+)\}\^\{\+([\d.]+)\}\s*\$?",
         repl_allowance,
-        text
+        text,
     )
 
     def repl_allowance_2line(m):
@@ -61,15 +59,11 @@ def normalize_text(raw_text: str) -> str:
         """,
         repl_allowance_2line,
         text,
-        flags=re.VERBOSE
+        flags=re.VERBOSE,
     )
 
     # ---------- 规则 2：A ±0.15 ----------
-    text = re.sub(
-        r"([A-Za-z0-9]+)\s*±\s*([\d.]+)",
-        r"\1</allow>[±\2]",
-        text
-    )
+    text = re.sub(r"([A-Za-z0-9]+)\s*±\s*([\d.]+)", r"\1</allow>[±\2]", text)
 
     # ---------- 规则 1：[Z] / (Z) → Z ----------
     text = re.sub(r"[\[\(]([^\[\]\(\)]+)[\]\)]", r"\1", text)
@@ -97,7 +91,7 @@ def normalize_text(raw_text: str) -> str:
         )
         \s*$
         """,
-        re.VERBOSE
+        re.VERBOSE,
     )
 
     # FCF 单行匹配：
@@ -122,17 +116,13 @@ def normalize_text(raw_text: str) -> str:
         (?P<bases>[XYZ](?:\s+[XYZ])*)
         \s*\$?\s*$
         """,
-        re.VERBOSE
+        re.VERBOSE,
     )
 
     for line in lines:
         m_lr = leftrightarrow_pat.match(line)
         if m_lr:
-            diam = (
-                    m_lr.group("diam1")
-                    or m_lr.group("diam2")
-                    or m_lr.group("diam3")
-            )
+            diam = m_lr.group("diam1") or m_lr.group("diam2") or m_lr.group("diam3")
 
             out.append("<FCF-Position>")
             out.append(f"</FCF-index>[<Diam>{diam}]")
@@ -166,7 +156,9 @@ def normalize_text(raw_text: str) -> str:
     return text.strip()
 
 
-def process_image_content(image_path, element_type="text", save_dir=None, ocr_model=None):
+def process_image_content(
+    image_path, element_type="text", save_dir=None, ocr_model=None
+):
     """处理图像内容并提取文本
 
     Args:
@@ -183,10 +175,10 @@ def process_image_content(image_path, element_type="text", save_dir=None, ocr_mo
             image_path=image_path,
             element_type=element_type,
             save_dir=save_dir,
-            ocr_model=ocr_model
+            ocr_model=ocr_model,
         )
 
-        result_text = result_text.replace('[', '').replace(']', '')
+        result_text = result_text.replace("[", "").replace("]", "")
 
         result_text = normalize_text(result_text)
 
@@ -197,6 +189,7 @@ def process_image_content(image_path, element_type="text", save_dir=None, ocr_mo
         print(f"处理图像时出错: {e}")
         return None
 
+
 # 使用示例
 if __name__ == "__main__":
     # 示例1: 处理文本图像
@@ -205,4 +198,3 @@ if __name__ == "__main__":
     if text_content:
         print("提取的文本内容:")
         print(text_content)
-    

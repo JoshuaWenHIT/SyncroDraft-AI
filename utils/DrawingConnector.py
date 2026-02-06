@@ -19,8 +19,9 @@ class DrawingConnector:
         # 1. 转灰度并二值化 (假设白底黑字或黑底白字，统一转为黑底白线)
         gray = cv2.cvtColor(self.original_img, cv2.COLOR_BGR2GRAY)
         # 自适应阈值处理，提取线条
-        binary = cv2.adaptiveThreshold(~gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                       cv2.THRESH_BINARY, 15, -2)
+        binary = cv2.adaptiveThreshold(
+            ~gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, -2
+        )
         self.binary_map = binary
 
     def preprocess_lines(self, text_boxes_to_mask):
@@ -32,10 +33,12 @@ class DrawingConnector:
 
         # 1. 抹除文字：将文本框区域涂黑，避免文字本身的笔画干扰路径搜索
         #    但是保留文本框边缘一点点，以便后续连接
-        for (x, y, w, h) in text_boxes_to_mask:
+        for x, y, w, h in text_boxes_to_mask:
             # 稍微缩小一点抹除范围，防止把刚接触的线头彻底抹没了
             pad = 2
-            cv2.rectangle(clean_lines, (x + pad, y + pad), (x + w - pad, y + h - pad), 0, -1)
+            cv2.rectangle(
+                clean_lines, (x + pad, y + pad), (x + w - pad, y + h - pad), 0, -1
+            )
 
         # 2. 骨架化：将线条变细为 1 像素
         #    Skeletonize 比较耗时，但能保证拓扑结构准确
@@ -64,13 +67,15 @@ class DrawingConnector:
             for a_idx in found_arrow_indices:
                 a_id = arrow_boxes[a_idx]["id"]  # 使用输入数据中的id字段
                 a_type = arrow_boxes[a_idx].get("type", "Unknown")  # 提取箭头类型
-                matches.append({
-                    "text_id": t_id,
-                    "text_box": t_box["bbox"],
-                    "arrow_id": a_id,
-                    "arrow_type": a_type,  # 添加箭头类型
-                    "arrow_box": arrow_bboxes[a_idx]
-                })
+                matches.append(
+                    {
+                        "text_id": t_id,
+                        "text_box": t_box["bbox"],
+                        "arrow_id": a_id,
+                        "arrow_type": a_type,  # 添加箭头类型
+                        "arrow_box": arrow_bboxes[a_idx],
+                    }
+                )
 
         return matches
 
@@ -116,7 +121,8 @@ class DrawingConnector:
 
             # 2. 检查是否命中箭头
             for i, (ax, ay, aw, ah) in enumerate(target_boxes):
-                if i in found_targets: continue
+                if i in found_targets:
+                    continue
                 # 稍微放宽碰撞检测 (Buffer)，保证接触即命中
                 if (ax - 5) <= cx <= (ax + aw + 5) and (ay - 5) <= cy <= (ay + ah + 5):
                     found_targets.add(i)
@@ -124,12 +130,14 @@ class DrawingConnector:
                     self.debug_img[cy, cx] = [0, 0, 255]
 
             # 如果已经找到两个箭头(通常尺寸线两头各一个)，可以提前结束优化速度
-            if len(found_targets) >= 1: break
+            if len(found_targets) >= 1:
+                break
 
             # 3. 沿骨架游走 (8邻域)
             for dy in [-1, 0, 1]:
                 for dx in [-1, 0, 1]:
-                    if dx == 0 and dy == 0: continue
+                    if dx == 0 and dy == 0:
+                        continue
                     ny, nx = cy + dy, cx + dx
 
                     if 0 <= ny < self.h and 0 <= nx < self.w:
@@ -147,24 +155,39 @@ class DrawingConnector:
 
         # 画所有箭头框 (绿色)
         for m in matches:
-            a_box = m['arrow_box']
-            a_type = m.get('arrow_type', 'Unknown')  # 获取箭头类型
+            a_box = m["arrow_box"]
+            a_type = m.get("arrow_type", "Unknown")  # 获取箭头类型
             x, y, w, h = a_box
             cv2.rectangle(vis_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.putText(vis_img, f"A{m['arrow_id']}({a_type})", (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0),
-                        2)
+            cv2.putText(
+                vis_img,
+                f"A{m['arrow_id']}({a_type})",
+                (x, y - 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 255, 0),
+                2,
+            )
 
         # 画文本框 (蓝色) 和 连接线
         for m in matches:
-            t_box = m['text_box']
-            t_id = m['text_id']
-            a_box = m['arrow_box']
-            a_type = m.get('arrow_type', 'Unknown')  # 获取箭头类型
+            t_box = m["text_box"]
+            t_id = m["text_id"]
+            a_box = m["arrow_box"]
+            a_type = m.get("arrow_type", "Unknown")  # 获取箭头类型
 
             # 画文本框
             tx, ty, tw, th = t_box
             cv2.rectangle(vis_img, (tx, ty), (tx + tw, ty + th), (255, 0, 0), 2)
-            cv2.putText(vis_img, f"T{t_id}", (tx, ty - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+            cv2.putText(
+                vis_img,
+                f"T{t_id}",
+                (tx, ty - 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 0, 0),
+                2,
+            )
 
             # 画一条直线表示匹配关系 (红色虚线效果)
             t_center = (int(tx + tw / 2), int(ty + th / 2))
@@ -172,8 +195,19 @@ class DrawingConnector:
             cv2.line(vis_img, t_center, a_center, (0, 0, 255), 2)
 
             # 在连线中间显示箭头类型
-            mid_point = ((t_center[0] + a_center[0]) // 2, (t_center[1] + a_center[1]) // 2)
-            cv2.putText(vis_img, a_type, mid_point, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
+            mid_point = (
+                (t_center[0] + a_center[0]) // 2,
+                (t_center[1] + a_center[1]) // 2,
+            )
+            cv2.putText(
+                vis_img,
+                a_type,
+                mid_point,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.4,
+                (0, 0, 255),
+                1,
+            )
 
         # cv2.imshow("Matches", vis_img)
         cv2.imwrite("result_matches.png", vis_img)
@@ -201,7 +235,7 @@ if __name__ == "__main__":
         {
             "id": 2222222,
             "bbox": [61, 427, 96, 47],
-        }
+        },
     ]
     # my_text_boxes = [
     #     [41,421,70,45],  # 假设这是 "10.00" 的位置
@@ -229,7 +263,7 @@ if __name__ == "__main__":
             "id": 1004,
             "type": "Vertical",
             "bbox": [100, 542, 17, 26],
-        }
+        },
     ]
     # my_arrow_boxes = [
     #     [67,474,17,27],  # 箭头1
@@ -244,8 +278,10 @@ if __name__ == "__main__":
     # 打印文本结果
     print("\n--- 匹配结果 ---")
     for res in results:
-        arrow_type = res.get('arrow_type', 'Unknown')
-        print(f"文本框 (ID {res['text_id']}) 匹配到了 -> 箭头 (ID {res['arrow_id']}, 类型: {arrow_type})")
+        arrow_type = res.get("arrow_type", "Unknown")
+        print(
+            f"文本框 (ID {res['text_id']}) 匹配到了 -> 箭头 (ID {res['arrow_id']}, 类型: {arrow_type})"
+        )
 
     # 显示图片结果
     matcher.visualize(results, my_arrow_boxes)
